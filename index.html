@@ -16,6 +16,23 @@
   ::-webkit-scrollbar{width:8px;height:8px}
   ::-webkit-scrollbar-track{background:transparent}
   ::-webkit-scrollbar-thumb{background:#64748b66;border-radius:99px}
+  /* Festejo: globitos que suben en cada consulta correcta */
+  #celebration-layer{position:fixed;inset:0;z-index:75;pointer-events:none;overflow:hidden}
+  .celebration-bubble{
+    position:absolute;bottom:-90px;left:var(--left);
+    width:var(--size);height:var(--size);border-radius:50%;
+    background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.95) 0 10%,var(--bubble-color) 18% 72%,rgba(0,0,0,.18) 100%);
+    box-shadow:inset -4px -6px 10px rgba(0,0,0,.18),0 0 16px var(--bubble-color);
+    opacity:0;will-change:transform,opacity;
+    animation:bubble-rise var(--duration) cubic-bezier(.2,.6,.3,1) forwards;
+  }
+  @keyframes bubble-rise{
+    0%{transform:translate3d(0,0,0) scale(.6);opacity:0}
+    12%{opacity:.95}
+    72%{opacity:.9}
+    100%{transform:translate3d(var(--drift),-115vh,0) scale(1.18);opacity:0}
+  }
+  @media (prefers-reduced-motion:reduce){.celebration-bubble{animation-duration:.5s}}
   details>summary{list-style:none}
   details>summary::-webkit-details-marker{display:none}
   @page{size:A4 landscape;margin:10mm}
@@ -81,6 +98,7 @@
         <div class="text-[10px] uppercase tracking-wider text-blue-500 font-bold" id="module-label">Módulo</div>
         <h2 id="lesson-title" class="font-bold text-base md:text-xl truncate">Cargando...</h2>
       </div>
+      <span id="validator-badge" title="Validadores de estado, estudio, práctica y felicitaciones" class="hidden lg:inline text-[10px] bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full font-bold">🛡️ Validadores activos</span>
       <span id="stage-badge" class="hidden sm:inline text-xs bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full font-medium"></span>
       <button onclick="openGoals()" title="Mapa de metas: avance secuencial" class="p-2 rounded-lg bg-fuchsia-100 dark:bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300 hover:scale-105 transition"><span class="hidden sm:inline text-xs font-bold">🎯 Metas</span><span class="sm:hidden text-lg">🎯</span></button>
       <button onclick="openStudy()" title="Modo estudio: explicación personalizada del módulo" class="text-lg p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:scale-105 transition"><span>📖</span></button>
@@ -139,6 +157,26 @@
 <div id="modal-root" class="fixed inset-0 z-[60] hidden">
   <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeModal()"></div>
   <div id="modal-panel" class="relative h-full w-full sm:h-auto sm:max-w-3xl sm:mx-auto sm:mt-8 sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl overflow-y-auto sm:max-h-[88vh]"></div>
+</div>
+
+<!-- FESTEJO: confeti + globitos por cada consulta correcta -->
+<div id="celebration-layer" class="print-hide" aria-hidden="true"></div>
+
+<!-- ERROR FLOTANTE: aparece centrado sin tener que desplazarte -->
+<div id="error-overlay" class="fixed inset-0 z-[80] hidden">
+  <div class="absolute inset-0 bg-black/75 backdrop-blur-sm" onclick="closeErrorOverlay()"></div>
+  <div class="relative h-full w-full overflow-y-auto flex items-start justify-center p-3 md:p-6">
+    <div class="w-full max-w-3xl mt-4 md:mt-10 rounded-2xl border-2 border-red-500 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between gap-3 px-4 md:px-6 py-3 bg-red-50 dark:bg-red-500/10 border-b border-red-200 dark:border-red-500/30">
+        <div class="text-lg md:text-2xl font-black uppercase tracking-wide text-red-700 dark:text-red-200">❌ Error · corrige esto</div>
+        <button onclick="closeErrorOverlay()" title="Cerrar error" class="text-red-500 hover:text-red-700 text-xl font-black leading-none">✕</button>
+      </div>
+      <div id="error-overlay-body" class="p-4 md:p-6 text-base md:text-xl font-extrabold leading-8 text-red-900 dark:text-red-50 max-h-[65vh] overflow-y-auto"></div>
+      <div class="px-4 md:px-6 pb-4 flex flex-wrap gap-2">
+        <button onclick="closeErrorOverlay()" class="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm">Seguir intentando</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -231,11 +269,11 @@ L('OR lógico',
  SEED.EMP, 'SELECT nombre FROM empleados WHERE salario<2500 OR nombre=\'Marta\';', (u,v)=>u.length===2&&v.length===2),
 
 L('NOT y distinto',
- '<p><code>&lt;&gt;</code> (o <code>!=</code>) significa "distinto de". <code>NOT</code> invierte una condición completa.</p>',
- 'Muestra el <strong>nombre</strong> de todos menos Ana.',
+ '<p><code>NOT</code> invierte el resultado de una condición completa: lo que era verdadero pasa a falso y al revés. Escribe siempre <code>NOT (condición)</code> con paréntesis para que no haya dudas de qué estás negando.</p><p class="mt-2"><code>&lt;&gt;</code> (o <code>!=</code>) significa "distinto de" y es la forma corta de <code>NOT (igual)</code>: <code>NOT (nombre = \'Ana\')</code> equivale a <code>nombre &lt;&gt; \'Ana\'</code>. Lo mismo pasa con <code>NOT (salario &gt; 3000)</code> → <code>salario &lt;= 3000</code>.</p><p class="mt-2">Cuidado con <code>NULL</code>: <code>NOT (email = NULL)</code> sigue siendo desconocido. Para nulos usa <code>IS NOT NULL</code>, no <code>NOT (... = NULL)</code>.</p>',
+ 'Muestra el <strong>nombre</strong> de todos menos Ana usando <code>NOT (...)</code>.',
  'nombre\nLuis\nMarta\nJose',
- 'Usa el operador <>|nombre <> \'Ana\'|SELECT nombre FROM empleados WHERE nombre <> \'Ana\';',
- SEED.EMP, 'SELECT nombre FROM empleados WHERE nombre<>\'Ana\';', (u,v)=>u.length===3&&v.length===3),
+ 'NOT se escribe antes del paréntesis|NOT (nombre = \'Ana\')|También vale nombre <> \'Ana\'|SELECT nombre FROM empleados WHERE NOT (nombre = \'Ana\');',
+ SEED.EMP, 'SELECT nombre FROM empleados WHERE NOT (nombre=\'Ana\');', (u,v)=>u.length===3&&v.length===3),
 
 L('BETWEEN',
  '<p><code>BETWEEN a AND b</code> incluye <strong>ambos extremos</strong>. Es azúcar sintáctico de <code>&gt;= a AND &lt;= b</code>.</p>',
@@ -1520,6 +1558,23 @@ WHERE salario &gt;= 2500 AND salario &lt;= 4000;</pre>
       <li><code>LIKE '%a%'</code> busca "contiene a"; <code>%</code> es cualquier longitud y <code>_</code> es un solo carácter.</li>
       <li><code>NULL</code> es ausencia de dato: nunca uses <code>= NULL</code>, usa <code>IS NULL</code>.</li>
     </ul>
+    <p class="mt-3"><strong>NOT bien explicado:</strong> <code>NOT</code> invierte una condición completa. Escríbelo siempre con paréntesis y recuerda que <code>&lt;&gt;</code> es la forma corta de negar una igualdad.</p>
+    <pre class="mt-2 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto">-- Estas tres consultas devuelven lo mismo: todos menos Ana
+WHERE NOT (nombre = 'Ana');
+WHERE nombre &lt;&gt; 'Ana';
+WHERE nombre != 'Ana';
+
+-- Negando otros filtros
+WHERE NOT (salario &gt; 3000);        -- equivale a salario &lt;= 3000
+WHERE nombre NOT IN ('Ana', 'Marta');
+WHERE nombre NOT LIKE 'A%';
+WHERE salario NOT BETWEEN 2000 AND 3000;
+WHERE email IS NOT NULL;             -- NO escribas NOT (email = NULL)</pre>
+    <ul class="list-disc pl-5 mt-2 space-y-1 text-slate-600 dark:text-slate-300">
+      <li><strong>De Morgan:</strong> <code>NOT (A AND B) = NOT A OR NOT B</code> y <code>NOT (A OR B) = NOT A AND NOT B</code>.</li>
+      <li><strong>Con NULL:</strong> <code>NOT (email = NULL)</code> sigue siendo desconocido. La forma correcta es <code>IS NOT NULL</code>.</li>
+      <li><strong>Con listas:</strong> <code>NOT IN</code> con un <code>NULL</code> dentro devuelve cero filas; usa <code>NOT EXISTS</code> con subconsultas.</li>
+    </ul>
   </section>
 
   <section>
@@ -1557,9 +1612,21 @@ DELETE FROM empleados WHERE nombre = 'Jose';</pre>
     <p class="mt-2 text-amber-700 dark:text-amber-300"><strong>⚠️ Regla de oro:</strong> un <code>UPDATE</code> o <code>DELETE</code> sin <code>WHERE</code> afecta a <strong>todas las filas</strong>. Antes de ejecutarlo, haz un <code>SELECT</code> con el mismo filtro y comprueba qué filas saldrán.</p>
   </section>
 
+  <section>
+    <h4 class="font-bold text-base text-fuchsia-700 dark:text-fuchsia-300">🧭 Apéndice: mapa de todos los tipos de consulta</h4>
+    <p class="mt-2">Esta guía se centra en fundamentos, pero debes saber que SQL completo tiene cinco familias. El tema 8 del modo estudio las desarrolla todas con ejemplos.</p>
+    <pre class="mt-2 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto">DQL  SELECT ... FROM ... WHERE ... GROUP BY ... HAVING ... ORDER BY ... LIMIT ...;
+DML  INSERT / UPDATE / DELETE / UPSERT
+DDL  CREATE / ALTER / DROP (TABLE, INDEX, VIEW, TRIGGER) · TRUNCATE en otros motores
+TCL  BEGIN / COMMIT / ROLLBACK / SAVEPOINT / RELEASE
+DCL  GRANT / REVOKE
+UTIL EXPLAIN / VACUUM / PRAGMA / MERGE / CALL / EXEC</pre>
+    <p class="mt-2 text-xs text-slate-500"><strong>Nota de NOT:</strong> niega una condición completa (<code>NOT (nombre = 'Ana')</code>), equivale a <code>&lt;&gt;</code> en igualdades, y tiene formas propias: <code>NOT IN</code>, <code>NOT LIKE</code>, <code>NOT BETWEEN</code> e <code>IS NOT NULL</code>. Nunca escribas <code>NOT (campo = NULL)</code>.</p>
+  </section>
+
   <div class="p-4 rounded-xl bg-green-50 dark:bg-green-500/10 border-l-4 border-green-500">
     <h4 class="font-bold text-green-700 dark:text-green-300">✅ Checklist antes de practicar</h4>
-    <p class="text-slate-600 dark:text-slate-300">Sé explicar con tus palabras: qué hace <code>AS</code>, por qué el <code>WHERE</code> no ve alias del <code>SELECT</code>, diferencia entre <code>=</code> e <code>IS NULL</code>, entre <code>BETWEEN</code> e <code>IN</code>, y qué pasa si omites el <code>WHERE</code> en un <code>UPDATE</code>.</p>
+    <p class="text-slate-600 dark:text-slate-300">Sé explicar con tus palabras: qué hace <code>AS</code>, por qué el <code>WHERE</code> no ve alias del <code>SELECT</code>, cómo negar una condición con <code>NOT</code> y sus cuatro variantes, diferencia entre <code>=</code> e <code>IS NULL</code>, entre <code>BETWEEN</code> e <code>IN</code>, y qué pasa si omites el <code>WHERE</code> en un <code>UPDATE</code>.</p>
   </div>
 </div>`,
 'mod-2': `
@@ -1763,13 +1830,19 @@ FROM empleados;</pre>
    </ul>
    <p class="mt-2 text-amber-700 dark:text-amber-300"><strong>⚠️ Trampa de entrevista:</strong> <code>SELECT nombre AS empleado FROM empleados WHERE empleado = 'Ana'</code> falla. El <code>WHERE</code> se ejecuta <em>antes</em> que el <code>SELECT</code>, así que aún no existe el alias. Repite <code>nombre</code> en el filtro o usa una CTE.</p>` },
 
- { t:'3 · Condiciones: WHERE, AND, OR, NOT', lesson:3, html:`
+ { t:'3 · Condiciones: WHERE, AND, OR y NOT bien explicado', lesson:3, html:`
    <h4 class="font-bold text-base text-blue-700 dark:text-blue-300">Qué es</h4>
-   <p><code>WHERE</code> evalúa cada fila y deja pasar solo las verdaderas. Es el primer filtro del pipeline.</p>
+   <p><code>WHERE</code> evalúa cada fila y deja pasar solo las que dan <strong>verdadero</strong>. Es el primer filtro del pipeline: se ejecuta después de <code>FROM/JOIN</code> y antes de <code>SELECT</code>.</p>
+   <ul class="list-disc pl-5 mt-2 space-y-1">
+     <li><strong>Comparación:</strong> <code>=</code>, <code>&lt;&gt;</code> (o <code>!=</code>), <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>.</li>
+     <li><strong>Texto</strong> entre comillas simples: <code>nombre = 'Ana'</code>. <strong>Números</strong> sin comillas: <code>salario = 3000</code>.</li>
+     <li><strong>Precedencia:</strong> <code>NOT</code> → <code>AND</code> → <code>OR</code>. Aunque sepas la regla, escribe paréntesis.</li>
+   </ul>
    <pre class="mt-2 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto">SELECT nombre, salario
 FROM empleados
 WHERE salario &gt;= 2500 AND salario &lt;= 4000;</pre>
-   <p class="mt-2"><strong>Tabla de verdad:</strong></p>
+   <h4 class="font-bold text-base text-blue-700 dark:text-blue-300 mt-6">2. Tabla de verdad</h4>
+   <p class="mt-2"><strong>Tabla de verdad:</strong> NOT solo invierte <strong>una</strong> condición: si <code>A</code> es verdadero, <code>NOT A</code> es falso. No cambia AND ni OR, solo niega lo que está entre paréntesis.</p>
    <pre class="mt-1 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto"> A     B     A AND B   A OR B   NOT A
  V     V        V        V        F
  V     F        F        V        F
@@ -1780,7 +1853,57 @@ WHERE salario &gt;= 2500 AND salario &lt;= 4000;</pre>
      <li>Precedencia: <code>NOT</code> → <code>AND</code> → <code>OR</code>. Usa paréntesis aunque no haga falta.</li>
      <li><code>&lt;&gt;</code> es distinto (también <code>!=</code> en SQLite).</li>
    </ul>
-   <p class="mt-2 text-amber-700 dark:text-amber-300"><strong>Error típico:</strong> escribir <code>salario &gt; 2000 OR nombre = 'Ana' AND salario &lt; 3000</code> esperando que el OR agrupe a los dos. Sin paréntesis, <code>AND</code> gana. Escribe <code>(... OR ...) AND ...</code>.</p>` },
+   <h4 class="font-bold text-base text-blue-700 dark:text-blue-300 mt-6">3. NOT paso a paso (caso real)</h4>
+   <p><strong>Datos disponibles — tabla <code>empleados</code>:</strong></p>
+   <pre class="mt-1 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto"> id | nombre | salario | activo
+ 1  | Ana    | 3000    | 1
+ 2  | Luis   | 2500    | 0
+ 3  | Marta  | 4000    | 1
+ 4  | Jose   | 2000    | 1</pre>
+   <p class="mt-2"><strong>Consulta:</strong></p>
+   <pre class="mt-1 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto">SELECT nombre
+FROM empleados
+WHERE NOT (salario = 3000);</pre>
+   <p class="mt-2"><strong>Resultado:</strong></p>
+   <pre class="mt-1 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto"> nombre
+ Luis
+ Marta
+ Jose</pre>
+   <p class="mt-2"><strong>Lectura línea a línea:</strong></p>
+   <ol class="list-decimal pl-5 mt-1 space-y-1 text-slate-600 dark:text-slate-300">
+     <li><code>SELECT nombre</code>: pido solo la columna <code>nombre</code>.</li>
+     <li><code>FROM empleados</code>: leo la tabla de arriba.</li>
+     <li><code>WHERE NOT (salario = 3000)</code>: primero se evalúa <code>salario = 3000</code>. Ana da <strong>verdadero</strong>; Luis, Marta y Jose dan <strong>falso</strong>. Luego <code>NOT</code> invierte: Ana queda fuera y los otros tres pasan.</li>
+     <li>El resultado es exactamente Luis, Marta y Jose. Es <strong>idéntico</strong> a escribir <code>WHERE salario &lt;&gt; 3000</code>.</li>
+   </ol>
+
+   <h4 class="font-bold text-base text-blue-700 dark:text-blue-300 mt-6">4. Las cuatro formas de negar</h4>
+   <pre class="mt-2 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto">-- Negar una igualdad
+WHERE NOT (nombre = 'Ana')          ≡ WHERE nombre &lt;&gt; 'Ana'
+
+-- Negar un rango (BETWEEN incluye extremos)
+WHERE NOT (salario BETWEEN 2000 AND 3000)   ≡ WHERE salario &lt; 2000 OR salario &gt; 3000
+WHERE salario NOT BETWEEN 2000 AND 3000      -- forma directa equivalente
+
+-- Negar una lista
+WHERE nombre NOT IN ('Ana', 'Marta')        ≡ WHERE NOT (nombre IN ('Ana', 'Marta'))
+
+-- Negar un patrón
+WHERE nombre NOT LIKE 'A%'                  ≡ WHERE NOT (nombre LIKE 'A%')
+
+-- Negar un nulo: ESTA es la forma correcta
+WHERE email IS NOT NULL                     ≡ WHERE NOT (email IS NULL)</pre>
+   <ul class="list-disc pl-5 mt-2 space-y-1">
+     <li><code>NOT (salario &gt; 3000)</code> es lo mismo que <code>salario &lt;= 3000</code>. Negar <code>&gt;</code> da <code>&lt;=</code>; negar <code>&lt;</code> da <code>&gt;=</code>.</li>
+     <li><code>NOT (A AND B)</code> no es lo mismo que <code>NOT A AND NOT B</code>. Las leyes de De Morgan dicen <code>NOT (A AND B) = NOT A OR NOT B</code> y <code>NOT (A OR B) = NOT A AND NOT B</code>.</li>
+     <li><strong>Trampa con NULL:</strong> <code>NOT (email = NULL)</code> no funciona porque <code>NULL = NULL</code> es desconocido. Usa <code>IS NOT NULL</code>.</li>
+     <li><strong>Trampa con NOT IN:</strong> si la lista contiene un <code>NULL</code>, la comparación se vuelve desconocida y no devuelve filas. Con subconsultas, prefiere <code>NOT EXISTS</code>.</li>
+   </ul>
+
+   <h4 class="font-bold text-base text-blue-700 dark:text-blue-300 mt-6">5. Errores típicos</h4>
+   <p class="text-amber-700 dark:text-amber-300"><strong>Error 1 — agrupar mal:</strong> <code>salario &gt; 2000 OR nombre = 'Ana' AND salario &lt; 3000</code>. Sin paréntesis, <code>AND</code> gana al <code>OR</code>. Si querías que el OR agrupara, escribe <code>(salario &gt; 2000 OR nombre = 'Ana') AND salario &lt; 3000</code>.</p>
+   <p class="mt-2 text-amber-700 dark:text-amber-300"><strong>Error 2 — negar sin paréntesis:</strong> <code>NOT nombre = 'Ana' AND salario &gt; 2000</code> se lee como <code>(NOT nombre = 'Ana') AND salario &gt; 2000</code>. Funciona, pero es ambiguo para quien lee. Escribe <code>NOT (nombre = 'Ana') AND salario &gt; 2000</code>.</p>
+   <p class="mt-2 text-amber-700 dark:text-amber-300"><strong>Error 3 — confundir NOT con distinto en nulos:</strong> <code>NOT (email = NULL)</code> devuelve cero filas. La respuesta correcta es <code>email IS NOT NULL</code>.</p>` },
 
  { t:'4 · BETWEEN, IN, LIKE e IS NULL', lesson:8, html:`
    <h4 class="font-bold text-base text-blue-700 dark:text-blue-300">Cuatro filtros que debes dominar</h4>
@@ -1846,7 +1969,96 @@ DELETE FROM empleados WHERE nombre = 'Jose';</pre>
 7 ORDER BY
 8 LIMIT</pre>
    <p class="mt-2">Esto explica tres misterios a la vez: por qué el <code>WHERE</code> no ve alias, por qué no puedes filtrar por <code>SUM()</code> en <code>WHERE</code>, y por qué <code>ORDER BY</code> sí puede usar alias.</p>
-   <p class="mt-2"><strong>Afinidad de tipos en SQLite:</strong> una columna declarada <code>INT</code> puede guardar texto si se lo insertas. Por eso <code>CAST('42' AS INT)</code> existe: explicitar intenciones evita comparaciones raras.</p>` }
+   <p class="mt-2"><strong>Afinidad de tipos en SQLite:</strong> una columna declarada <code>INT</code> puede guardar texto si se lo insertas. Por eso <code>CAST('42' AS INT)</code> existe: explicitar intenciones evita comparaciones raras.</p>
+
+   <h4 class="font-bold text-base text-fuchsia-700 dark:text-fuchsia-300 mt-8">📚 Catálogo completo de sentencias SQL</h4>
+   <p class="mt-2">SQL no es una sola consulta: es un lenguaje con varias familias. Cada sentencia hace <strong>una</strong> cosa; un <em>query</em> real suele combinar varias cláusulas de la familia DQL. Aquí están todas, con explicación y ejemplo para que no falte ninguna.</p>
+
+   <h5 class="font-bold text-sm text-blue-700 dark:text-blue-300 mt-5">A) DQL — Data Query Language (leer datos)</h5>
+   <pre class="mt-1 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto">SELECT [DISTINCT] columna1, columna2 AS alias
+FROM tabla
+[JOIN otra ON tabla.id = otra.id]
+[WHERE condición]
+[GROUP BY columna]
+[HAVING condición_de_grupo]
+[ORDER BY columna ASC|DESC]
+[LIMIT n OFFSET m];</pre>
+   <ul class="list-disc pl-5 mt-2 space-y-1 text-slate-600 dark:text-slate-300">
+     <li><strong>SELECT / proyección:</strong> <code>SELECT nombre, salario FROM empleados;</code> · <code>SELECT * FROM empleados;</code> trae todo.</li>
+     <li><strong>Alias AS:</strong> <code>SELECT nombre AS empleado FROM empleados;</code> cambia el nombre de salida.</li>
+     <li><strong>DISTINCT:</strong> <code>SELECT DISTINCT dept_id FROM empleados;</code> elimina duplicados del resultado.</li>
+     <li><strong>WHERE + AND/OR/NOT:</strong> <code>WHERE salario &gt;= 2000 AND NOT (nombre = 'Ana');</code> filtra filas antes de agrupar.</li>
+     <li><strong>BETWEEN / IN / LIKE / IS NULL:</strong> <code>WHERE salario BETWEEN 2000 AND 3000 AND nombre IN ('Ana','Marta');</code> · <code>WHERE nombre LIKE 'A%' AND email IS NOT NULL;</code></li>
+     <li><strong>ORDER BY / LIMIT / OFFSET:</strong> <code>ORDER BY salario DESC LIMIT 10 OFFSET 20;</code> ordena y pagina.</li>
+     <li><strong>Agregados + GROUP BY + HAVING:</strong> <code>SELECT dept_id, COUNT(*) AS n FROM empleados GROUP BY dept_id HAVING COUNT(*) &gt; 1;</code></li>
+     <li><strong>JOIN:</strong> <code>INNER JOIN</code> solo coincidencias; <code>LEFT JOIN</code> todas las de la izquierda; <code>RIGHT JOIN</code> todas las de la derecha; <code>CROSS JOIN</code> producto cartesiano; <code>SELF JOIN</code> la tabla contra sí misma. Ejemplo: <code>SELECT e.nombre, d.nom_dept FROM empleados e LEFT JOIN departamentos d ON e.dept_id = d.id;</code></li>
+     <li><strong>Operadores de conjuntos:</strong> <code>SELECT id FROM a UNION SELECT id FROM b;</code> (sin duplicados), <code>UNION ALL</code> (con duplicados), <code>INTERSECT</code> (comunes), <code>EXCEPT</code> (solo del primero).</li>
+     <li><strong>Subconsultas:</strong> escalar <code>SELECT nombre FROM empleados WHERE salario &gt; (SELECT AVG(salario) FROM empleados);</code> · <code>IN (SELECT ...)</code> · <code>EXISTS (SELECT 1 FROM ...)</code> · correlacionada donde la interna usa columnas de la externa.</li>
+     <li><strong>CASE:</strong> <code>SELECT nombre, CASE WHEN salario &gt;= 4000 THEN 'Alto' ELSE 'Medio' END AS nivel FROM empleados;</code></li>
+     <li><strong>CTE:</strong> <code>WITH altos AS (SELECT * FROM empleados WHERE salario &gt; 3000) SELECT * FROM altos;</code> · <code>WITH RECURSIVE numeros(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM numeros WHERE n&lt;5) SELECT * FROM numeros;</code></li>
+     <li><strong>Funciones de ventana:</strong> <code>ROW_NUMBER() OVER (PARTITION BY dept_id ORDER BY salario DESC)</code>, <code>RANK()</code>, <code>DENSE_RANK()</code>, <code>LAG()</code>, <code>LEAD()</code> y <code>SUM() OVER (...)</code>.</li>
+   </ul>
+
+   <h5 class="font-bold text-sm text-emerald-700 dark:text-emerald-300 mt-5">B) DML — Data Manipulation Language (escribir datos)</h5>
+   <pre class="mt-1 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto">INSERT INTO empleados (id, nombre, salario) VALUES (5, 'Lucia', 3200);
+INSERT INTO empleados SELECT * FROM empleados_antiguos;
+UPDATE empleados SET salario = salario * 1.10 WHERE dept_id = 10;
+DELETE FROM empleados WHERE activo = 0;
+INSERT INTO empleados (id, nombre) VALUES (1, 'Ana')
+  ON CONFLICT(id) DO UPDATE SET nombre = excluded.nombre;  -- UPSERT</pre>
+   <ul class="list-disc pl-5 mt-2 space-y-1 text-slate-600 dark:text-slate-300">
+     <li><strong>INSERT:</strong> agrega filas; también puede insertar el resultado de un <code>SELECT</code>.</li>
+     <li><strong>UPDATE:</strong> modifica filas. Sin <code>WHERE</code>, cambia toda la tabla.</li>
+     <li><strong>DELETE:</strong> borra filas. Sin <code>WHERE</code>, vacía la tabla.</li>
+     <li><strong>UPSERT / REPLACE:</strong> si existe, actualiza; si no, inserta. En SQLite se usa <code>ON CONFLICT ... DO UPDATE</code> o <code>REPLACE INTO</code>.</li>
+   </ul>
+
+   <h5 class="font-bold text-sm text-amber-700 dark:text-amber-300 mt-5">C) DDL — Data Definition Language (definir estructura)</h5>
+   <pre class="mt-1 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto">CREATE TABLE empleados (id INT PRIMARY KEY, nombre TEXT, salario INT);
+ALTER TABLE empleados ADD COLUMN activo INT DEFAULT 1;
+ALTER TABLE empleados RENAME COLUMN nombre TO nombre_completo;
+ALTER TABLE empleados DROP COLUMN activo;
+DROP TABLE empleados;
+TRUNCATE TABLE empleados;              -- PostgreSQL/MySQL; en SQLite usa DELETE FROM
+CREATE INDEX idx_salario ON empleados(salario);
+DROP INDEX idx_salario;
+CREATE VIEW v_nominas AS SELECT nombre, salario FROM empleados;
+DROP VIEW v_nominas;
+CREATE TRIGGER trg_audit AFTER UPDATE ON empleados BEGIN ... END;
+DROP TRIGGER trg_audit;</pre>
+   <p class="mt-2 text-xs text-slate-500">SQLite soporta <code>CREATE/ALTER/DROP TABLE</code>, <code>CREATE/DROP INDEX</code>, <code>CREATE/DROP VIEW</code> y <code>CREATE/DROP TRIGGER</code>. <code>TRUNCATE TABLE</code> no existe en SQLite: equivale a <code>DELETE FROM tabla;</code> (reiniciando la secuencia si la hubiera).</p>
+
+   <h5 class="font-bold text-sm text-rose-700 dark:text-rose-300 mt-5">D) TCL — Transaction Control Language (transacciones)</h5>
+   <pre class="mt-1 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto">BEGIN;
+  UPDATE cuentas SET saldo = saldo - 100 WHERE id = 1;
+  UPDATE cuentas SET saldo = saldo + 100 WHERE id = 2;
+COMMIT;               -- confirma todo
+
+BEGIN;
+SAVEPOINT antes;
+  DELETE FROM logs WHERE ANTIGUO = 1;
+ROLLBACK TO antes;    -- deshace solo desde el savepoint
+RELEASE antes;
+COMMIT;
+
+ROLLBACK;             -- deshace toda la transacción</pre>
+
+   <h5 class="font-bold text-sm text-violet-700 dark:text-violet-300 mt-5">E) DCL — Data Control Language (permisos)</h5>
+   <pre class="mt-1 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto">GRANT SELECT, INSERT ON empleados TO analista;
+REVOKE INSERT ON empleados FROM analista;</pre>
+   <p class="mt-2 text-xs text-slate-500">SQLite no implementa <code>GRANT</code>/<code>REVOKE</code> (no tiene usuarios); los verás en PostgreSQL, MySQL o SQL Server. Se conceden o quitan privilegios sobre objetos.</p>
+
+   <h5 class="font-bold text-sm text-cyan-700 dark:text-cyan-300 mt-5">F) Utilidades y extensiones de motor</h5>
+   <pre class="mt-1 p-3 rounded-lg bg-slate-100 dark:bg-slate-950 text-xs overflow-x-auto">EXPLAIN QUERY PLAN SELECT * FROM empleados WHERE salario = 3000;
+EXPLAIN SELECT * FROM empleados;       -- plan detallado en otros motores
+VACUUM;                                -- recompacta la base SQLite
+PRAGMA foreign_keys = ON;              -- activa claves foráneas en SQLite
+MERGE INTO destino d USING origen o ON d.id = o.id
+  WHEN MATCHED THEN UPDATE SET d.total = o.total
+  WHEN NOT MATCHED THEN INSERT VALUES (o.id, o.total);  -- SQL Server/Oracle/PG15+
+CALL nombre_procedimiento(1);          -- MySQL/PostgreSQL
+EXEC nombre_procedimiento 1;           -- SQL Server</pre>
+   <p class="mt-2"><strong>Regla de oro:</strong> <code>SELECT</code> lee, <code>INSERT/UPDATE/DELETE/UPSERT</code> escriben datos, <code>CREATE/ALTER/DROP</code> cambian la estructura, <code>BEGIN/COMMIT/ROLLBACK</code> controlan transacciones y <code>GRANT/REVOKE</code> controlan permisos. Si sabes decir a qué familia pertenece una sentencia, ya sabes qué precauciones tomar.</p>` }
 ],
 
 'mod-2': [
@@ -2104,7 +2316,10 @@ const STUDY_EXAMPLES = {
   before:{c:['nombre','salario'],r:[['Ana',3500],['Luis',2800],['Marta',4200]]},
   sql:`SELECT nombre, salario\nFROM empleados\nWHERE salario >= 3000 AND salario <= 4000;`,
   after:{c:['nombre','salario'],r:[['Ana',3500],['Marta',4200]]},
-  read:`Cada fila se prueba contra la condición. Ana (3500) y Marta (4200) cumplen ambas; Luis (2800) falla la primera y se descarta. AND exige que las dos sean verdaderas.`
+  read:`Cada fila se prueba contra la condición. Ana (3500) y Marta (4200) cumplen ambas; Luis (2800) falla la primera y se descarta. AND exige que las dos sean verdaderas.`,
+  notSql:`SELECT nombre\nFROM empleados\nWHERE NOT (salario = 3000);`,
+  notAfter:{c:['nombre'],r:[['Luis'],['Marta'],['Jose']]},
+  notRead:`NOT invierte la condición. Ana (3000) da verdadero y por eso se excluye; Luis, Marta y Jose dan falso y por eso pasan. Es idéntico a WHERE salario <> 3000. También puedes negar listas con NOT IN, patrones con NOT LIKE, rangos con NOT BETWEEN y nulos con IS NOT NULL.`
 },
 'mod-1:3': {
   why: `BETWEEN, IN, LIKE e IS NULL son filtros especializados: rangos, listas, búsquedas de texto y datos ausentes.`,
@@ -2806,6 +3021,10 @@ let lastResult = null;
 let session = null;
 let tickTimer = null;
 let advanceTimer = null;
+let pendingLesson = null;
+let lastSuccessSql = null;
+let studyReview = null;
+let studyReviewNotice = '';
 
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -2832,6 +3051,141 @@ function loadState() {
 }
 function saveState() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
+/* ============================================================================
+   VALIDACIÓN EN TIEMPO DE EJECUCIÓN — ingeniería de sistemas
+   Toda entrada, todo estado y toda felicitación pasa por aquí.
+   ========================================================================== */
+function sanitizeName(v) {
+  return String(v ?? '').replace(/[<>]/g, '').trim().slice(0, 60);
+}
+function validateState() {
+  const issues = [];
+  const lessonIds = new Set(LESSONS.map(l => l.id));
+  const moduleIds = new Set(MODULES.map(m => m.id));
+
+  const beforeCompleted = state.completed.length;
+  state.completed = [...new Set(state.completed)].filter(id => lessonIds.has(id));
+  if (state.completed.length !== beforeCompleted) issues.push('estapas');
+
+  const beforeGuides = state.guidesSeen.length;
+  state.guidesSeen = [...new Set(state.guidesSeen)].filter(id => moduleIds.has(id));
+  if (state.guidesSeen.length !== beforeGuides) issues.push('guías');
+
+  const beforeStudy = state.studySeen.length;
+  state.studySeen = [...new Set(state.studySeen)].filter(k => {
+    const [mid, i] = String(k).split(':');
+    return moduleIds.has(mid) && Number.isInteger(Number(i));
+  });
+  if (state.studySeen.length !== beforeStudy) issues.push('temas vistos');
+
+  Object.keys(state.quizzes).forEach(id => {
+    const q = state.quizzes[id];
+    if (!moduleIds.has(id) || !q || typeof q !== 'object') { delete state.quizzes[id]; issues.push('quiz'); return; }
+    q.score = Math.max(0, Math.min(100, Number(q.score) || 0));
+    q.passed = !!q.passed && q.score >= 80;
+  });
+
+  ['exam','interview'].forEach(k => {
+    const r = state[k];
+    if (!r) return;
+    r.score = Math.max(0, Math.min(100, Number(r.score) || 0));
+    r.passed = !!r.passed && r.score >= 70;
+  });
+
+  const cleanName = sanitizeName(state.certName);
+  if (cleanName !== state.certName) issues.push('nombre');
+  state.certName = cleanName;
+  state.theme = state.theme === 'light' ? 'light' : 'dark';
+
+  if (issues.length) saveState();
+  return issues;
+}
+function validateStudyGateForLesson(idx) {
+  const l = LESSONS[idx];
+  if (!l) return { ok:false, reason:'La estapa no existe.' };
+  const mi = MODULES.findIndex(m => m.id === l.moduleId);
+  if (mi < 0 || !moduleUnlocked(mi)) return { ok:false, reason:'Completa el quiz de la meta anterior para desbloquear este módulo.' };
+  if (state.completed.includes(l.id)) return { ok:true, mode:'review' };
+
+  const topics = studyTopics(l.moduleId);
+  if (!topics.length) return { ok:true, mode:'none' };
+
+  const local = MODULES[mi].lessons.findIndex(x => x.id === l.id);
+  const topicIdx = Math.max(0, topicIndexForLesson(l.moduleId, local));
+  if (studyForcedSeen.has(l.moduleId + ':' + topicIdx + ':' + idx)) return { ok:true, mode:'topic', topicIdx };
+
+  // Una guía completa solo se considera válida cuando finishStudy() registra
+  // explícitamente el permiso de CADA tema. No basta con haber abierto el módulo.
+  return {
+    ok:false, mode:'topic', topicIdx,
+    reason:'Estudia este tema antes de practicar. La guía de este módulo todavía no está completada.'
+  };
+}
+function validateSessionResult(s) {
+  const issues = [];
+  if (!s || !Array.isArray(s.questions) || !s.questions.length) issues.push('preguntas');
+  if (!s || !Array.isArray(s.answers) || s.answers.length !== (s.questions?.length || -1)) issues.push('respuestas');
+  if (s?.answers?.some(a => !a.q || typeof a.points !== 'number' || a.points < 0 || a.points > s.perQuestion)) issues.push('puntos');
+  return issues;
+}
+function validateBeforeSuccess(l) {
+  const lesson = l || LESSONS[currentIdx];
+  if (!lesson) return { ok:false, reason:'No hay una estapa activa válida.' };
+  return validateStudyGateForLesson(LESSONS.indexOf(lesson));
+}
+function celebrate(msg, l) {
+  const v = validateBeforeSuccess(l);
+  if (!v.ok) {
+    const idx = LESSONS.indexOf(l || LESSONS[currentIdx]);
+    if (idx >= 0) { pendingLesson = idx; openStudyForLesson(idx); }
+    showFeedback('🔒 ' + v.reason + ' Felicitación no registrada todavía.', 'info');
+    return false;
+  }
+  // Solo se festeja DESPUÉS de validar. Nunca se muestra un "¡Correcto!" falso.
+  showFeedback(msg, 'success');
+  launchCelebration();
+  return true;
+}
+
+/* Globitos animados: funcionan aunque el CDN de confeti no cargue */
+function launchBubbles() {
+  if (typeof document === 'undefined' || !document.createElement) return 0;
+  const layer = document.getElementById('celebration-layer');
+  if (!layer || !layer.appendChild) return 0;
+
+  const colors = ['#22d3ee','#818cf8','#f472b6','#fbbf24','#34d399','#a78bfa','#f87171'];
+  const total = 18;
+  for (let i = 0; i < total; i++) {
+    const b = document.createElement('span');
+    b.className = 'celebration-bubble';
+    const size = 14 + Math.floor(Math.random() * 30);
+    const left = 4 + Math.random() * 92;
+    const drift = Math.round((Math.random() - .5) * 180);
+    const duration = 2.6 + Math.random() * 1.7;
+    b.style.setProperty('--size', size + 'px');
+    b.style.setProperty('--left', left + '%');
+    b.style.setProperty('--drift', drift + 'px');
+    b.style.setProperty('--duration', duration.toFixed(2) + 's');
+    b.style.setProperty('--bubble-color', colors[i % colors.length]);
+    layer.appendChild(b);
+    if (typeof setTimeout === 'function') {
+      setTimeout(() => { if (b.remove) b.remove(); else if (b.parentNode) b.parentNode.removeChild(b); }, (duration + .3) * 1000);
+    }
+  }
+  return total;
+}
+
+/* Confeti + globitos en CADA acierto, no solo la primera vez */
+function launchCelebration() {
+  launchBubbles();
+  if (typeof confetti === 'function') {
+    confetti({ particleCount: 80, spread: 65, origin: { y: .7 } });
+    if (typeof setTimeout === 'function') {
+      setTimeout(() => confetti({ particleCount: 45, spread: 100, origin: { y: .85 }, colors: ['#22d3ee','#818cf8','#f472b6','#fbbf24','#34d399'] }), 160);
+    }
+  }
+}
+
 /* ---------------- Reglas de desbloqueo ---------------- */
 function moduleUnlocked(mi) {
   if (mi === 0) return true;
@@ -2850,8 +3204,13 @@ function nextLockedLesson() {
 
 /* ---------------- Arranque ---------------- */
 window.addEventListener('DOMContentLoaded', () => {
+  const repaired = validateState();
+  if (repaired.length) console.warn('[SQL Master] Campos reparados:', repaired.join(', '));
+  const vb = document.getElementById('validator-badge');
+  if (vb) vb.textContent = repaired.length ? '🛡️ ' + repaired.length + ' campos reparados' : '🛡️ Validadores activos';
   document.documentElement.classList.toggle('dark', state.theme === 'dark');
   updateThemeIcon();
+  document.addEventListener('keydown', handleGlobalKeys);
 
   require.config({ paths:{ vs:'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
   require(['vs/editor/editor.main'], () => {
@@ -2934,7 +3293,7 @@ function renderSidebar() {
   </div>
   <button onclick="openCertificate()" class="mt-3 w-full text-[11px] py-2 rounded-lg border border-amber-500/40 text-amber-400 hover:bg-slate-800 transition">🎓 Certificado / progreso</button>`;
 
-  const goalsBtn = `<button onclick="openGoals()" class="mt-2 w-full text-[11px] py-2 rounded-lg border border-fuchsia-500/40 text-fuchsia-400 hover:bg-slate-800 transition font-bold">🎯 Mapa de metas</button>`;
+  const goalsBtn = `<button onclick="openGoals()" class="mt-2 w-full text-[11px] py-2 rounded-lg border border-fuchsia-500/40 text-fuchsia-400 hover:bg-slate-800 transition font-bold">🗺️ Aventura de castillos</button>`;
   const full = goalsBtn + html + exHtml + intHtml;
   document.getElementById('sidebar-desktop').innerHTML = full;
   document.getElementById('sidebar-mobile').innerHTML = full;
@@ -2978,40 +3337,83 @@ function goToGoal(mi) {
   const pending = m.lessons.findIndex(l => !state.completed.includes(l.id));
   loadLesson(firstLessonIndexOfModule(mi) + (pending >= 0 ? pending : 0));
 }
+
+/* Desde el mapa: cada cuadro del castillo empieza con su estudio, nunca salta directo a la práctica */
+function startStageWithStudy(idx) {
+  const l = LESSONS[idx];
+  if (!l) return;
+  const mi = MODULES.findIndex(m => m.id === l.moduleId);
+  if (mi < 0 || !moduleUnlocked(mi)) return;
+  if (state.completed.includes(l.id)) {
+    closeModal();
+    loadLesson(idx);
+    return;
+  }
+  openStudyForLesson(idx);
+}
+
 function openGoals() {
+  studyReview = null;
+  studyReviewNotice = '';
   const passed = MODULES.filter((m, i) => !!state.quizzes[m.id]?.passed).length;
   const cards = MODULES.map((m, mi) => {
     const st = goalState(mi);
     const doneLessons = m.lessons.filter(l => state.completed.includes(l.id)).length;
     const q = state.quizzes[m.id];
     const pct = Math.round(doneLessons / m.lessons.length * 100);
-    const badge = st === 'done' ? '✅' : st === 'locked' ? '🔒' : (mi+1);
+    const castle = st === 'done' ? '🏰' : st === 'active' ? '🏯' : '🔒';
     const border = st === 'done' ? 'border-green-500/50 bg-green-500/5'
                  : st === 'active' ? 'border-blue-500/60 bg-blue-500/5'
                  : 'border-slate-200 dark:border-slate-800 opacity-70';
-    return `<div class="relative pl-10 md:pl-12">
-      <div class="absolute left-0 top-3 w-7 h-7 md:w-9 md:h-9 rounded-full flex items-center justify-center text-[11px] md:text-xs font-black ${st==='done'?'bg-green-500 text-white':st==='active'?'bg-blue-600 text-white shadow-lg shadow-blue-500/25':'bg-slate-200 dark:bg-slate-800 text-slate-500'}">${badge}</div>
-      ${mi < MODULES.length-1 ? `<div class="absolute left-[13px] md:left-[17px] top-10 bottom-0 w-px ${st==='done'?'bg-green-500/60':'bg-slate-200 dark:bg-slate-800'}"></div>` : ''}
-      <div class="mb-4 p-4 rounded-2xl border ${border}">
+    const trail = mi < MODULES.length - 1
+      ? `<div class="absolute left-[15px] md:left-[19px] top-11 bottom-0 w-1 rounded-full ${st==='done'?'bg-green-500/70':'bg-slate-200 dark:bg-slate-800'}"></div>`
+      : '';
+    const stages = m.lessons.map((l, li) => {
+      const gi = firstLessonIndexOfModule(mi) + li;
+      const done = state.completed.includes(l.id);
+      const here = gi === currentIdx && !done;
+      const disabled = st === 'locked';
+      return `<button onclick="startStageWithStudy(${gi})" ${disabled?'disabled':''} title="${esc(l.t)}" class="w-9 h-9 rounded-lg text-[11px] font-black border-2 transition ${
+        done ? 'border-green-500 bg-green-500/15 text-green-500'
+             : (here ? 'border-blue-500 bg-blue-500/20 text-blue-500 shadow-lg shadow-blue-500/20'
+                     : 'border-slate-300 dark:border-slate-700 text-slate-400 hover:border-fuchsia-400 hover:text-fuchsia-400')
+      } ${disabled?'opacity-40 cursor-not-allowed':''}">${done?'✅':(here?'▶':li+1)}</button>`;
+    }).join('');
+
+    return `<div class="relative pl-12 md:pl-14">
+      <div class="absolute left-0 top-1 text-2xl md:text-3xl">${castle}</div>
+      ${trail}
+      <div class="mb-5 p-4 rounded-2xl border ${border}">
         <div class="flex flex-wrap items-start justify-between gap-2">
           <div class="min-w-0">
-            <div class="text-[10px] font-bold uppercase tracking-widest ${st==='active'?'text-blue-500':st==='done'?'text-green-500':'text-slate-500'}">Meta ${mi+1} de ${MODULES.length}${st==='done'?' · superada':st==='locked'?' · bloqueada':' · en curso'}</div>
+            <div class="text-[10px] font-bold uppercase tracking-widest ${st==='active'?'text-blue-500':st==='done'?'text-green-500':'text-slate-500'}">Meta ${mi+1} de ${MODULES.length}${st==='done'?' · castillo conquistado':st==='locked'?' · cerrado':' · en curso'}</div>
             <h4 class="font-bold text-sm md:text-base mt-0.5">${m.title}</h4>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">${st==='locked'?'Completa y aprueba la meta anterior para desbloquear.':esc(m.desc)}</p>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">${st==='locked'?'Derrota al maestro del castillo anterior para abrir este.':esc(m.desc)}</p>
           </div>
           <div class="text-right shrink-0">
             <div class="text-xs font-black ${st==='done'?'text-green-500':'text-blue-500'}">${doneLessons}/${m.lessons.length}</div>
-            <div class="text-[9px] text-slate-400 uppercase tracking-wider">estapas</div>
+            <div class="text-[9px] text-slate-400 uppercase tracking-wider">cuadros</div>
           </div>
+        </div>
+        <div class="mt-3 p-3 rounded-xl bg-slate-100/70 dark:bg-slate-950/40">
+          <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2">Cuadros del castillo · toca uno y estudias primero</div>
+          <div class="flex flex-wrap gap-1.5">${stages}</div>
         </div>
         <div class="h-1.5 mt-3 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden"><div class="h-full transition-all ${st==='done'?'bg-green-500':'bg-blue-500'}" style="width:${pct}%"></div></div>
         <div class="flex flex-wrap items-center justify-between gap-2 mt-3">
-          <div class="text-[10px] ${q?.passed?'text-green-500 font-bold':'text-slate-400'}">${q?.passed?'✅ Quiz aprobado ('+q.score+'/100)':doneLessons===m.lessons.length?'📝 Quiz disponible':'📚 '+m.lessons.length+' ejercicios con guía obligatoria'}</div>
+          <div class="text-[10px] ${q?.passed?'text-green-500 font-bold':'text-slate-400'}">${q?.passed?'👑 Maestro del castillo ('+q.score+'/100)':doneLessons===m.lessons.length?'📝 Jefe disponible: quiz del castillo':'📚 '+m.lessons.length+' cuadros con guía obligatoria'}</div>
           ${goalActions(mi)}
         </div>
       </div>
     </div>`;
   }).join('');
+
+  const cycle = `<div class="flex flex-wrap items-center justify-center gap-2 text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400">
+    <span class="px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300">📖 Estudiar</span><span>→</span>
+    <span class="px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300">✅ Confirmar lectura</span><span>→</span>
+    <span class="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">⌨️ Practicar</span><span>→</span>
+    <span class="px-2.5 py-1 rounded-lg bg-fuchsia-100 dark:bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300">🏰 Avanzar de castillo</span>
+  </div>`;
 
   const examState = examUnlocked() ? (state.exam?.passed ? '✅ Superado' : 'Disponible') : '🔒 Aprueba las '+MODULES.length+' metas';
   const interviewState = state.exam?.passed ? (state.interview?.passed ? '✅ Superado' : 'Disponible') : '🔒 Aprueba el examen';
@@ -3019,24 +3421,25 @@ function openGoals() {
     <div class="p-5 md:p-8">
       <div class="flex items-start justify-between gap-3 mb-5">
         <div>
-          <div class="text-[10px] font-bold uppercase tracking-[.2em] text-fuchsia-500">Ruta secuencial</div>
-          <h3 class="text-xl md:text-3xl font-black mt-1">🎯 Mapa de metas</h3>
-          <p class="text-xs md:text-sm text-slate-500 mt-2 leading-relaxed">Cada meta se abre solo cuando apruebas el quiz de la anterior. Lee su guía, practica sus ejercicios y supera su quiz para desbloquear la siguiente. Las ${MODULES.length} metas abren el examen final y este abre la entrevista.</p>
+          <div class="text-[10px] font-bold uppercase tracking-[.2em] text-fuchsia-500">Ruta secuencial · 🎯 Mapa de metas</div>
+          <h3 class="text-xl md:text-3xl font-black mt-1">🗺️ Aventura de castillos</h3>
+          <p class="text-xs md:text-sm text-slate-500 mt-2 leading-relaxed">Avanzas de castillo en castillo como en Zelda. Cada castillo tiene cuadros: tocas uno, estudias su tema, confirmas la lectura y solo entonces se abre la práctica. Si pasas la consulta, salta el estudio del siguiente cuadro. Si fallas, el error aparece en grande y vuelves a intentarlo.</p>
         </div>
         <button onclick="closeModal()" class="shrink-0 text-slate-400 hover:text-red-400 text-xl leading-none">✕</button>
       </div>
+      <div class="mb-5 p-3 rounded-2xl border border-blue-200 dark:border-blue-500/20 bg-blue-50/60 dark:bg-blue-500/5">${cycle}</div>
       <div class="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-fuchsia-50 dark:from-blue-500/10 dark:to-fuchsia-500/10 border border-blue-200 dark:border-blue-500/20 flex flex-wrap items-center justify-between gap-3">
-        <div><div class="text-2xl font-black text-blue-600 dark:text-blue-300">${passed} / ${MODULES.length}</div><div class="text-[10px] uppercase tracking-widest text-slate-500">metas superadas</div></div>
-        <div class="text-xs text-slate-500 dark:text-slate-400">${passed===MODULES.length?'🏆 Ruta completada: examen y entrevista desbloqueados.':passed===0?'Empieza por la meta 1. Práctica con guía y quiz al final.':'Vas bien: la siguiente meta ya está abierta.'}</div>
+        <div><div class="text-2xl font-black text-blue-600 dark:text-blue-300">${passed} / ${MODULES.length}</div><div class="text-[10px] uppercase tracking-widest text-slate-500">castillos conquistados</div></div>
+        <div class="text-xs text-slate-500 dark:text-slate-400">${passed===MODULES.length?'🏆 Ruta completada: examen y entrevista desbloqueados.':passed===0?'Empieza por la meta 1. Estudia, practica y vence al maestro del castillo.':'Vas bien: el siguiente castillo ya está abierto.'}</div>
       </div>
       ${cards}
-      <div class="mt-2 pl-10 md:pl-12 space-y-3">
+      <div class="mt-2 pl-12 md:pl-14 space-y-3">
         <div class="p-4 rounded-2xl border border-amber-500/40 bg-amber-500/5 flex flex-wrap items-center justify-between gap-3">
-          <div><div class="text-[10px] uppercase tracking-widest text-amber-600">Meta final · 1</div><div class="font-bold text-sm">🏆 Examen final · 100 preguntas</div><div class="text-[11px] text-slate-400">${examState}</div></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-amber-600">Castillo final · 1</div><div class="font-bold text-sm">🏆 Examen final · 100 preguntas</div><div class="text-[11px] text-slate-400">${examState}</div></div>
           <button onclick="openExam()" ${examUnlocked()?'':'disabled'} class="px-3 py-2 rounded-lg text-[11px] font-bold ${examUnlocked()?'bg-amber-500 text-slate-900':'bg-slate-200 dark:bg-slate-800 text-slate-400 opacity-60'}">${examUnlocked()?'Iniciar examen →':'🔒 Bloqueado'}</button>
         </div>
         <div class="p-4 rounded-2xl border border-fuchsia-500/40 bg-fuchsia-500/5 flex flex-wrap items-center justify-between gap-3">
-          <div><div class="text-[10px] uppercase tracking-widest text-fuchsia-600">Meta final · 2</div><div class="font-bold text-sm">🎤 Simulador de entrevista</div><div class="text-[11px] text-slate-400">${interviewState}</div></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-fuchsia-600">Castillo final · 2</div><div class="font-bold text-sm">🎤 Simulador de entrevista</div><div class="text-[11px] text-slate-400">${interviewState}</div></div>
           <button onclick="openInterview()" ${state.exam?.passed?'':'disabled'} class="px-3 py-2 rounded-lg text-[11px] font-bold ${state.exam?.passed?'bg-fuchsia-600 text-white':'bg-slate-200 dark:bg-slate-800 text-slate-400 opacity-60'}">${state.exam?.passed?'Iniciar entrevista →':'🔒 Bloqueado'}</button>
         </div>
       </div>
@@ -3048,6 +3451,20 @@ function openGoals() {
 function loadLesson(idx) {
   const l = LESSONS[idx];
   if (!l || !moduleUnlocked(MODULES.findIndex(m=>m.id===l.moduleId))) return;
+
+  // VALIDACIÓN DE ACCESO: sin estudio del módulo/tema no se carga la práctica.
+  const gate = validateStudyGateForLesson(idx);
+  if (!gate.ok) {
+    pendingLesson = idx;
+    studySessionSeen[l.moduleId] = true;
+    if (gate.mode === 'topic') openStudyForLesson(idx);
+    else openStudy(l.moduleId, true);
+    return;
+  }
+
+  pendingLesson = null;
+  studyReview = null;
+  studyReviewNotice = '';
   cancelAdvance();
   currentIdx = idx;
   hintStep = 0;
@@ -3066,22 +3483,19 @@ function loadLesson(idx) {
   renderSidebar();
   closeMobileMenu();
   window.scrollTo({top:0,behavior:'smooth'});
-
-  // Antes de practicar CUALQUIER estapa del módulo se abre su guía de estudio.
-  // En la misma visita no se repite al avanzar de estapa.
-  if (!studySessionSeen[l.moduleId]) {
-    studySessionSeen[l.moduleId] = true;
-    setTimeout(() => openStudy(l.moduleId, true), 400);
-  }
 }
 
 /* ============================================================================
    MODO ESTUDIO — explicación personalizada por módulo, ANTES de practicar.
    8 temas por módulo. Cada tema enlaza con la estapa exacta (topic.lesson).
    ========================================================================== */
-let studyCtx = { modId:null, topic:0, mandatory:false };
+let studyCtx = { modId:null, topic:0, mandatory:false, requiredTopic:null, targetLesson:null };
 /* La guía se abre siempre al empezar a practicar un módulo en cada visita */
 let studySessionSeen = {};
+/* Confirmación explícita del tema previo a cada estapa, dentro de esta visita */
+let studyForcedSeen = new Set();
+/* Último tema leído por módulo, para reabrir el estudio donde se dejó */
+let studyLastTopic = {};
 
 function studyKey(modId, i) { return modId + ':' + i; }
 function studyTopics(modId) {
@@ -3151,19 +3565,80 @@ function renderStudyExample(modId, topic) {
 }
 
 function openStudy(modId, mandatory=false) {
+  studyReview = null;
+  studyReviewNotice = '';
   const mid = modId || (LESSONS[currentIdx] && LESSONS[currentIdx].moduleId) || MODULES[0].id;
-  if (!studyTopics(mid).length) return;
-  studyCtx = { modId:mid, topic:0, mandatory:!!mandatory };
-  if (mandatory) markStudySeen(mid, 0);
+  const topics = studyTopics(mid);
+  if (!topics.length) return;
+  const last = studyLastTopic[mid];
+  const start = Number.isFinite(last) && last >= 0 && last < topics.length ? last : 0;
+  studySessionSeen[mid] = true;
+  studyCtx = { modId:mid, topic:start, mandatory:!!mandatory, requiredTopic:null, targetLesson:null };
+  if (mandatory) markStudySeen(mid, start);
   openModal(renderStudy(), true);
-  if (mandatory) {
-    const backdrop = document.querySelector('#modal-root > div:first-child');
-    if (backdrop) backdrop.onclick = null;
+  if (mandatory) lockStudyBackdrop();
+}
+
+/* Tras completar una estapa: localiza el tema de la SIGUIENTE estapa y obliga a estudiarlo */
+function lockStudyBackdrop() {
+  const backdrop = document.querySelector('#modal-root > div:first-child');
+  if (backdrop) backdrop.onclick = null;
+}
+function closeStudy() {
+  const hadTarget = Number.isFinite(studyCtx.targetLesson) && !!LESSONS[studyCtx.targetLesson];
+  studyReview = null;
+  studyReviewNotice = '';
+  studyCtx = { modId:null, topic:0, mandatory:false, requiredTopic:null, targetLesson:null };
+  closeModal();
+  showFeedback(hadTarget || pendingLesson !== null
+    ? '🔒 Estudio cerrado antes de validar. La práctica sigue bloqueada; vuelve a abrir el tema para desbloquearla.'
+    : 'Guía cerrada. Puedes volver a abrirla con el botón 📖 de la estapa cuando quieras.', 'info');
+}
+function topicIndexForLesson(modId, local) {
+  const topics = studyTopics(modId);
+  if (!topics.length) return -1;
+  const exact = topics.findIndex(tp => Number(tp.lesson) === local);
+  if (exact >= 0) return exact;
+  // Elige el tema cubierto con lesson más cercano, no el último de la lista
+  // (algunos módulos repiten lesson:0 en el tema de "Nivel experto").
+  let best = -1, bestLesson = -1;
+  topics.forEach((tp, i) => {
+    const val = Number(tp.lesson);
+    if (Number.isFinite(val) && val <= local && val > bestLesson) {
+      best = i; bestLesson = val;
+    }
+  });
+  return best >= 0 ? best : 0;
+}
+function openStudyForLesson(idx) {
+  const l = LESSONS[idx];
+  if (!l) return;
+  const mi = MODULES.findIndex(m => m.id === l.moduleId);
+  if (mi < 0 || !moduleUnlocked(mi)) return;
+  const topics = studyTopics(l.moduleId);
+  if (!topics.length) {
+    studySessionSeen[l.moduleId] = true;
+    loadLesson(idx);
+    return;
   }
+  const local = MODULES[mi].lessons.findIndex(x => x.id === l.id);
+  const topicIdx = Math.max(0, topicIndexForLesson(l.moduleId, local));
+  studyLastTopic[l.moduleId] = topicIdx;
+  studySessionSeen[l.moduleId] = true;
+  studyCtx = {
+    modId:l.moduleId, topic:topicIdx, mandatory:true,
+    requiredTopic:topicIdx, targetLesson:idx
+  };
+  // No se marca como visto al abrir: el alumno debe leerlo y pulsar "Ya estudié este tema".
+  openModal(renderStudy(), true);
+  lockStudyBackdrop();
 }
 
 function renderStudy() {
-  const { modId, topic, mandatory } = studyCtx;
+  // Pausa de repaso: al volver a estudio tras acertar, primero se revisa la sentencia.
+  if (studyReview) return renderStudyReview();
+
+  const { modId, topic, mandatory, requiredTopic, targetLesson } = studyCtx;
   const mod = modId === 'expert'
     ? { title:'⭐ Nivel Experto · Ingeniería de sistemas' }
     : (MODULES.find(m => m.id === modId) || { title:modId });
@@ -3171,10 +3646,23 @@ function renderStudy() {
   const t = topics[topic];
   const seenCount = studySeenCount(modId);
   const allSeen = studyAllSeen(modId);
-  const locked = mandatory && !allSeen;
+  const onlyThisTopic = requiredTopic !== null && requiredTopic !== undefined;
+  const forcedKey = modId + ':' + requiredTopic + ':' + targetLesson;
+  const requiredSeen = onlyThisTopic ? studyForcedSeen.has(forcedKey) : allSeen;
+  const locked = mandatory && !requiredSeen;
+  const modIndex = MODULES.findIndex(m => m.id === modId);
+  const moduleLocked = modId !== 'expert' && modIndex >= 0 && !moduleUnlocked(modIndex);
+  const practiceBlocked = locked || moduleLocked;
   const isSeen = state.studySeen.includes(studyKey(modId, topic));
   const practiceFn = modId === 'expert' ? 'practiceGlobal' : 'practiceTopic';
-  const practiceLabel = modId === 'expert' ? 'Practicar en la estapa ' + (Number(t.lesson)+1) + ' →' : 'Practicar este tema →';
+  const practiceAction = onlyThisTopic
+    ? `finishStudy('${modId}')`
+    : (modId === 'expert' ? `${practiceFn}(${Number(t.lesson)})` : `practiceFromGuide(${Number(t.lesson)})`);
+  const practiceLabel = modId === 'expert'
+    ? 'Practicar en la estapa ' + (Number(t.lesson)+1) + ' →'
+    : (onlyThisTopic ? 'Ir a la siguiente estapa →' : 'Practicar este tema →');
+  const reviewNotice = studyReviewNotice;
+  studyReviewNotice = '';
   const levelTabs = mandatory ? '' : `
     <div class="flex flex-wrap gap-1.5 mb-2">
       ${MODULES.map(m => `<button onclick="switchStudyLevel('${m.id}')" class="px-2.5 py-1 rounded-lg text-[10px] font-bold ${modId===m.id?'bg-blue-600 text-white':'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500'}">${m.title}</button>`).join('')}
@@ -3204,14 +3692,16 @@ function renderStudy() {
         <div class="text-[10px] font-bold uppercase tracking-[.18em] text-blue-500">Modo estudio · antes de practicar</div>
         <h3 class="text-lg md:text-2xl font-bold mt-1 truncate">${mod.title}</h3>
         <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">${mandatory
-          ? 'Guía obligatoria de este módulo: ' + topics.length + ' temas (' + totalStudy + ' temas en todo el curso, contando las ' + MODULES.length + ' metas y el Nivel Experto). Léelos para poder practicar.'
+          ? (onlyThisTopic
+            ? 'Estudia primero este tema: es el que corresponde a la siguiente estapa. Al verlo se habilita el botón para ir a practicar.'
+            : 'Guía obligatoria de este módulo: ' + topics.length + ' temas (' + totalStudy + ' temas en todo el curso, contando las ' + MODULES.length + ' metas y el Nivel Experto). Léelos para poder practicar.')
           : (modId === 'expert'
             ? 'Profundización de ingeniería: JOINs por dentro, rendimiento, concurrencia y patrones de producción.'
             : topics.length + ' temas de este módulo · ' + totalStudy + ' temas en todo el curso. Elige uno y salta a su estapa.')}</p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
-        <button onclick="openGoals()" title="Mapa de metas" class="px-2.5 py-1.5 rounded-lg bg-fuchsia-100 dark:bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300 text-[11px] font-bold">🎯 Metas</button>
-        ${mandatory ? '' : `<button onclick="closeModal()" class="text-slate-400 hover:text-red-400 text-xl leading-none">✕</button>`}
+        <button onclick="openGoals()" title="Mapa de metas" class="px-2.5 py-1.5 rounded-lg bg-fuchsia-100 dark:bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300 text-[11px] font-bold">🗺️ Aventura</button>
+        <button onclick="closeStudy()" title="Cerrar estudio (Esc)" class="text-slate-400 hover:text-red-400 text-xl leading-none">✕</button>
       </div>
     </div>
 
@@ -3222,6 +3712,7 @@ function renderStudy() {
 
       <div class="flex-1 min-h-0 overflow-y-auto p-5 md:p-8">
         <div class="max-w-3xl mx-auto">
+          ${reviewNotice ? `<div class="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 text-sm font-bold text-emerald-800 dark:text-emerald-200">${reviewNotice}</div>` : ''}
           <div class="flex flex-wrap items-center gap-2 mb-3">
             <span class="px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 text-[10px] font-bold uppercase tracking-wide">Tema ${topic+1} de ${topics.length}</span>
             ${isSeen ? `<span class="px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-300 text-[10px] font-bold">✓ Ya visto</span>` : ''}
@@ -3233,15 +3724,26 @@ function renderStudy() {
 
           <div class="mt-8 p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 border border-blue-200 dark:border-blue-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <div class="font-bold text-sm">${locked ? '🔒 Práctica bloqueada' : '🚀 ¿Ya lo entendiste?'}</div>
-              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${locked
-                ? 'Lee los ' + topics.length + ' temas para poder practicar. Van ' + seenCount + ' de ' + topics.length + '.'
-                : 'Abre la estapa exacta donde se aplica este tema con un solo clic.'}</p>
+              <div class="font-bold text-sm">${practiceBlocked ? '🔒 Práctica bloqueada' : '🚀 ¿Ya lo entendiste?'}</div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${moduleLocked
+                ? 'Aprueba el quiz de la meta anterior para desbloquear este módulo.'
+                : (locked
+                  ? (onlyThisTopic
+                    ? 'Lee este tema para desbloquear la siguiente estapa. El estudio va antes de la práctica.'
+                    : 'Lee los ' + topics.length + ' temas para poder practicar. Van ' + seenCount + ' de ' + topics.length + '.')
+                  : (onlyThisTopic
+                    ? 'Tema listo. Pulsa el botón para cargar la siguiente estapa y practicar.'
+                    : 'Abre la estapa exacta donde se aplica este tema con un solo clic.'))}</p>
             </div>
-            <button onclick="${practiceFn}(${Number(t.lesson)})" ${locked ? 'disabled title=\"Completa los ' + topics.length + ' temas\"' : ''} class="shrink-0 px-5 py-2.5 rounded-xl font-bold text-sm transition ${
-              locked ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                     : (modId === 'expert' ? 'bg-fuchsia-600 hover:bg-fuchsia-700 text-white shadow-lg shadow-fuchsia-500/20' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20')
-            }">${locked ? 'Bloqueado' : practiceLabel}</button>
+            <div class="flex flex-wrap gap-2 shrink-0">
+              ${onlyThisTopic && !requiredSeen && !moduleLocked
+                ? `<button onclick="confirmStudyTopic('${modId}')" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-sm shadow-lg shadow-amber-500/20">✅ Ya estudié este tema</button>`
+                : ''}
+              <button onclick="${practiceAction}" ${practiceBlocked ? ('disabled title="' + (moduleLocked ? 'Aprueba el quiz anterior' : (onlyThisTopic ? 'Confirma que leíste el tema' : 'Completa los ' + topics.length + ' temas')) + '"') : ''} class="px-5 py-2.5 rounded-xl font-bold text-sm transition ${
+                practiceBlocked ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                       : (modId === 'expert' ? 'bg-fuchsia-600 hover:bg-fuchsia-700 text-white shadow-lg shadow-fuchsia-500/20' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20')
+              }">${practiceBlocked ? 'Bloqueado' : practiceLabel}</button>
+            </div>
           </div>
         </div>
       </div>
@@ -3252,21 +3754,101 @@ function renderStudy() {
       <div class="text-[11px] font-semibold text-slate-400 order-last w-full sm:order-none sm:w-auto text-center">
         📚 ${seenCount} / ${topics.length} temas vistos
       </div>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <button onclick="showStudyTopic(${topic+1})" ${topic===topics.length-1?'disabled opacity-40 cursor-not-allowed':''} class="px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold">Siguiente →</button>
         ${mandatory
-          ? `<button onclick="finishStudy('${modId}')" ${allSeen?'':'disabled opacity-40 cursor-not-allowed'} class="px-4 py-2 rounded-lg ${allSeen?'bg-green-600 hover:bg-green-700 text-white':'bg-slate-200 dark:bg-slate-800 text-slate-400'} font-bold text-xs">Empezar a practicar →</button>`
-          : `<button onclick="closeModal()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs">Cerrar estudio</button>`}
+          ? `<button onclick="finishStudy('${modId}')" ${requiredSeen?'':'disabled opacity-40 cursor-not-allowed'} class="px-4 py-2 rounded-lg ${requiredSeen?'bg-green-600 hover:bg-green-700 text-white':'bg-slate-200 dark:bg-slate-800 text-slate-400'} font-bold text-xs">${onlyThisTopic && targetLesson !== null && targetLesson !== undefined ? '📝 Ir a la práctica →' : 'Empezar a practicar →'}</button>`
+          : `<button onclick="goToPractices('${modId}')" ${moduleLocked?'disabled opacity-40 cursor-not-allowed':''} title="${moduleLocked?'Aprueba el quiz anterior':'Ir a la primera estapa pendiente'}" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs">📝 Prácticas</button>
+             <button onclick="closeModal()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs">Cerrar estudio</button>`}
       </div>
     </div>
   </div>`;
+}
+
+/* Pausa de repaso: se muestra al volver a estudio después de acertar una consulta */
+function renderStudyReview() {
+  const r = studyReview;
+  const cols = Array.isArray(r.cols) ? r.cols : [];
+  const rows = Array.isArray(r.rows) ? r.rows : [];
+  const head = cols.length
+    ? `<tr>${cols.map(c => `<th class="px-3 py-2 text-left border-b border-slate-200 dark:border-slate-700">${esc(norm(c))}</th>`).join('')}</tr>`
+    : '';
+  const body = rows.length
+    ? rows.map(row => `<tr>${cols.map((_, i) => `<td class="px-3 py-2 border-b border-slate-100 dark:border-slate-800">${esc(norm(row[i]))}</td>`).join('')}</tr>`).join('')
+    : '';
+  const resultHtml = cols.length
+    ? `<div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700"><table class="w-full text-xs md:text-sm"><thead class="bg-slate-100 dark:bg-slate-800">${head}</thead><tbody>${body || `<tr><td colspan="${cols.length}" class="px-3 py-4 text-center text-slate-400">Sin filas devueltas.</td></tr>`}</tbody></table></div>`
+    : `<div class="p-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm text-slate-500">La consulta se ejecutó correctamente, pero no devolvió columnas.</div>`;
+
+  return `
+  <div class="flex flex-col h-full min-h-0">
+    <div class="shrink-0 px-5 md:px-7 py-4 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <div class="text-[10px] font-bold uppercase tracking-[.18em] text-blue-500">Modo estudio · pausa de repaso</div>
+        <h3 class="text-lg md:text-2xl font-bold mt-1">🔍 Revisa la sentencia que acabas de hacer</h3>
+        <p class="text-[11px] text-slate-400 mt-1">${esc(r.title || 'Estapa completada')}${r.nextTitle ? ' → siguiente: ' + esc(r.nextTitle) : ''}</p>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button onclick="openGoals()" title="Mapa de metas" class="px-2.5 py-1.5 rounded-lg bg-fuchsia-100 dark:bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300 text-[11px] font-bold">🗺️ Aventura</button>
+        <button onclick="closeStudy()" title="Cerrar estudio (Esc)" class="text-slate-400 hover:text-red-400 text-xl leading-none">✕</button>
+      </div>
+    </div>
+
+    <div class="flex-1 min-h-0 overflow-y-auto p-5 md:p-8">
+      <div class="max-w-3xl mx-auto space-y-5">
+        <section class="p-4 md:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+          <div class="text-xs font-black uppercase tracking-wide text-blue-600 dark:text-blue-300 mb-2">📝 Tu sentencia SQL</div>
+          <pre class="p-3 rounded-xl bg-slate-100 dark:bg-slate-950 font-mono text-xs md:text-sm text-slate-800 dark:text-slate-200 overflow-x-auto whitespace-pre-wrap">${esc(r.sql || '-- sin sentencia')}</pre>
+        </section>
+
+        <section class="p-4 md:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+          <div class="text-xs font-black uppercase tracking-wide text-emerald-600 dark:text-emerald-300 mb-2">📊 Resultado que obtuviste</div>
+          ${resultHtml}
+        </section>
+
+        <section class="p-4 md:p-5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border border-amber-300 dark:border-amber-500/30">
+          <div class="font-black text-sm text-amber-900 dark:text-amber-200">⏸️ Pausa de repaso</div>
+          <p class="text-[13px] leading-6 text-amber-800 dark:text-amber-100/80 mt-1">
+            Ya acertaste esta estapa. Compara tu consulta con el resultado y lee con calma. Cuando estés listo,continúa con el tema de la siguiente estapa.
+          </p>
+          <button onclick="continueStudyReview()" title="También puedes pulsar Enter" class="mt-3 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-sm shadow-lg shadow-amber-500/20">
+            ✅ Ya revisé, sigamos estudiando →
+          </button>
+          <div class="text-[10px] text-amber-700 dark:text-amber-300/70 mt-2 font-semibold">⌨️ Enter también funciona · Esc cierra el estudio</div>
+        </section>
+      </div>
+    </div>
+  </div>`;
+}
+
+function continueStudyReview() {
+  studyReview = null;
+  studyReviewNotice = '📚 Sigamos estudiando: lee el tema de la siguiente estapa y confírmalo para volver a practicar.';
+  const panel = document.getElementById('modal-panel');
+  if (panel) {
+    panel.innerHTML = renderStudy();
+    panel.scrollTop = 0;
+  }
 }
 
 function showStudyTopic(i) {
   const topics = studyTopics(studyCtx.modId);
   if (i < 0 || i >= topics.length) return;
   studyCtx.topic = i;
-  markStudySeen(studyCtx.modId, i);
+  studyLastTopic[studyCtx.modId] = i;
+  const onlyThisTopic = studyCtx.requiredTopic !== null && studyCtx.requiredTopic !== undefined;
+  if (!onlyThisTopic || i === studyCtx.requiredTopic) markStudySeen(studyCtx.modId, i);
+  const panel = document.getElementById('modal-panel');
+  panel.innerHTML = renderStudy();
+  panel.scrollTop = 0;
+}
+
+/* El alumno confirma que leyó el tema antes de desbloquear la siguiente estapa */
+function confirmStudyTopic(modId) {
+  const rt = studyCtx.requiredTopic;
+  if (rt === null || rt === undefined) return;
+  studyForcedSeen.add(modId + ':' + rt + ':' + studyCtx.targetLesson);
+  markStudySeen(modId, rt);
   const panel = document.getElementById('modal-panel');
   panel.innerHTML = renderStudy();
   panel.scrollTop = 0;
@@ -3278,16 +3860,19 @@ function practiceTopic(local) {
   if (!state.guidesSeen.includes(mid)) { state.guidesSeen.push(mid); saveState(); }
   const mi = MODULES.findIndex(m => m.id === mid);
   const idx = firstLessonIndexOfModule(mi) + Number(local);
-  studyCtx = { modId:null, topic:0, mandatory:false };
+  studyCtx = { modId:null, topic:0, mandatory:false, requiredTopic:null, targetLesson:null };
   closeModal();
   loadLesson(idx);
 }
 
 /* Cambia entre los 3 módulos y el Nivel Experto dentro del Modo Estudio */
 function switchStudyLevel(id) {
-  if (!studyTopics(id).length || studyCtx.mandatory) return;
-  studyCtx = { modId:id, topic:0, mandatory:false };
-  markStudySeen(id, 0);
+  const topics = studyTopics(id);
+  if (!topics.length || studyCtx.mandatory) return;
+  const last = studyLastTopic[id];
+  const start = Number.isFinite(last) && last >= 0 && last < topics.length ? last : 0;
+  studyCtx = { modId:id, topic:start, mandatory:false, requiredTopic:null, targetLesson:null };
+  markStudySeen(id, start);
   const panel = document.getElementById('modal-panel');
   panel.innerHTML = renderStudy();
   panel.scrollTop = 0;
@@ -3298,18 +3883,88 @@ function practiceGlobal(idx) {
   if (!l) return;
   studySessionSeen[l.moduleId] = true;
   if (!state.guidesSeen.includes(l.moduleId)) { state.guidesSeen.push(l.moduleId); saveState(); }
-  studyCtx = { modId:null, topic:0, mandatory:false };
+  studyCtx = { modId:null, topic:0, mandatory:false, requiredTopic:null, targetLesson:null };
   closeModal();
   loadLesson(idx);
 }
 
+/* Botón 📝 Prácticas del panel de estudio: abre la primera estapa pendiente del módulo */
+function goToPractices(modId) {
+  const mid = modId || (studyCtx.modId && studyCtx.modId !== 'expert' ? studyCtx.modId : (LESSONS[currentIdx] && LESSONS[currentIdx].moduleId));
+  if (!mid) return;
+
+  if (mid === 'expert') {
+    const topics = studyTopics('expert');
+    const found = topics.find(tp => {
+      const idx = Number(tp.lesson);
+      return Number.isFinite(idx) && LESSONS[idx] && !state.completed.includes(LESSONS[idx].id);
+    });
+    practiceGlobal(found ? Number(found.lesson) : nextLockedLesson());
+    return;
+  }
+
+  const mi = MODULES.findIndex(m => m.id === mid);
+  if (mi < 0 || !moduleUnlocked(mi)) return;
+  const lessons = MODULES[mi].lessons;
+  let local = lessons.findIndex(l => !state.completed.includes(l.id));
+  if (local < 0) local = 0;
+  const target = firstLessonIndexOfModule(mi) + local;
+
+  studySessionSeen[mid] = true;
+  if (!studyAllSeen(mid)) {
+    pendingLesson = target;
+    openStudy(mid, true);
+    return;
+  }
+  studyCtx = {
+    modId:mid, topic:Math.max(0, studyLastTopic[mid] || 0),
+    mandatory:true, requiredTopic:null, targetLesson:target
+  };
+  finishStudy(mid);
+}
+
+/* Registra permiso explícito para CADA estapa cuando se valida la guía completa */
+function unlockAllModuleTopics(modId) {
+  const mi = MODULES.findIndex(m => m.id === modId);
+  if (mi < 0) return;
+  MODULES[mi].lessons.forEach((lesson, local) => {
+    const ti = Math.max(0, topicIndexForLesson(modId, local));
+    studyForcedSeen.add(modId + ':' + ti + ':' + (firstLessonIndexOfModule(mi) + local));
+  });
+}
+
+/* Botón "Practicar este tema" de la guía completa */
+function practiceFromGuide(local) {
+  const mid = studyCtx.modId;
+  const mi = MODULES.findIndex(m => m.id === mid);
+  if (mi < 0) return;
+  studyCtx.targetLesson = firstLessonIndexOfModule(mi) + Number(local);
+  finishStudy(mid);
+}
+
 function finishStudy(modId) {
-  if (!studyAllSeen(modId)) return;
+  const { requiredTopic, targetLesson } = studyCtx;
+  const ok = (requiredTopic === null || requiredTopic === undefined)
+    ? studyAllSeen(modId)
+    : studyForcedSeen.has(modId + ':' + requiredTopic + ':' + targetLesson);
+  if (!ok) return;
+
   studySessionSeen[modId] = true;
+  if (requiredTopic === null || requiredTopic === undefined) unlockAllModuleTopics(modId);
   if (!state.guidesSeen.includes(modId)) { state.guidesSeen.push(modId); saveState(); }
-  studyCtx = { modId:null, topic:0, mandatory:false };
+  const target = (targetLesson !== null && targetLesson !== undefined && LESSONS[targetLesson])
+    ? targetLesson
+    : pendingLesson;
+  pendingLesson = null;
+  studyCtx = { modId:null, topic:0, mandatory:false, requiredTopic:null, targetLesson:null };
   closeModal();
-  showFeedback('✅ Guía leída. Ya puedes practicar este módulo: cada estapa explica su comando y muestra sus tablas.', 'info');
+
+  if (Number.isFinite(target) && LESSONS[target]) {
+    loadLesson(target);
+    showFeedback('✅ Estudio validado. <strong>Práctica desbloqueada. ¡A resolver!</strong>', 'success');
+  } else {
+    showFeedback('✅ Guía validada. Ya puedes practicar este módulo.', 'info');
+  }
 }
 
 /* Compatibilidad con el botón antiguo de la guía */
@@ -3389,32 +4044,37 @@ function scheduleAdvance(delay=2200) {
   advanceTimer = setTimeout(advanceAfterSuccess, delay);
 }
 function advanceAfterSuccess() {
-  advanceTimer = null;
+  cancelAdvance();
   const l = LESSONS[currentIdx];
   if (!l) return;
   const mi = MODULES.findIndex(m => m.id === l.moduleId);
   const next = nextLessonInModule();
 
   if (next !== -1) {
-    loadLesson(next);
-    showFeedback('✅ Estapa completada. <strong>Siguiente estapa cargada automáticamente.</strong>', 'success');
+    if (!celebrate('✅ Estapa completada. <strong>Estudia el tema de la siguiente estapa antes de practicar.</strong>', l)) return;
+    // Al volver a estudio se muestra primero la sentencia acertada para repasarla.
+    studyReview = lastSuccessSql
+      ? { ...lastSuccessSql, nextTitle: LESSONS[next]?.t || '' }
+      : null;
+    openStudyForLesson(next);
     return;
   }
 
+  studyReview = null;
   // Última estapa del módulo: abrir el quiz directamente
   if (moduleComplete(mi)) {
     const mod = MODULES[mi];
     if (!state.quizzes[mod.id]?.passed) {
-      showFeedback('🎉 ¡Módulo completo! <strong>Abriendo el quiz del módulo…</strong>', 'success');
+      if (!celebrate('🎉 ¡Módulo completo! <strong>Abriendo el quiz del módulo…</strong>', l)) return;
       setTimeout(() => { if (session === null && LESSONS[currentIdx]?.id === l.id) openQuiz(mod.id); }, 1400);
       return;
     }
     if (mi < MODULES.length - 1 && moduleUnlocked(mi+1)) {
-      showFeedback('✅ Quiz aprobado. <strong>Abriendo el siguiente módulo…</strong>', 'success');
+      if (!celebrate('✅ Quiz aprobado. <strong>Abriendo el siguiente módulo…</strong>', l)) return;
       setTimeout(() => { if (session === null && LESSONS[currentIdx]?.id === l.id) loadLesson(firstLessonIndexOfModule(mi+1)); }, 1400);
       return;
     }
-    showFeedback('🏆 ¡Programa completo! Ya puedes hacer el examen final.', 'success');
+    celebrate('🏆 ¡Programa completo! Ya puedes hacer el examen final.', l);
   }
 }
 
@@ -3422,6 +4082,13 @@ function runQuery() {
   const sql = editor.getValue().trim();
   if (!sql) return showFeedback('Escribe una consulta primero.', 'info');
   const l = LESSONS[currentIdx];
+  if (!l) return showFeedback('No hay una estapa válida cargada.', 'info');
+  const gate = validateStudyGateForLesson(currentIdx);
+  if (!gate.ok) {
+    pendingLesson = currentIdx;
+    openStudyForLesson(currentIdx);
+    return showFeedback('🔒 ' + gate.reason + ' Ejecución bloqueada hasta validar el estudio.', 'info');
+  }
   const attempt = new SQL.Database();
   attempt.run(l.st);
   try {
@@ -3441,16 +4108,23 @@ function runQuery() {
     } else { lastResult=null; showEmpty('Consulta ejecutada. Sin filas devueltas.'); }
 
     if (l.fn(u, verifyRes)) {
+      lastSuccessSql = {
+        sql,
+        title: l.t,
+        cols: Array.isArray(cols) ? cols.slice() : [],
+        rows: Array.isArray(u) ? u.map(row => Array.isArray(row) ? row.slice() : [row]) : []
+      };
       const alreadyDone = state.completed.includes(l.id);
-      showFeedback('✅ ¡Correcto! +100 XP · <button onclick="advanceAfterSuccess()" class="ml-1 underline font-bold hover:text-blue-600 dark:hover:text-blue-300">Siguiente →</button>', 'success');
-      if (!alreadyDone) {
-        state.completed.push(l.id);
-        saveState();
-        confetti({particleCount:80,spread:65,origin:{y:.7}});
-        updateGamification();
-        renderSidebar();
+      const ok = celebrate('✅ ¡Correcto! +100 XP · <button onclick="advanceAfterSuccess()" class="ml-1 underline font-bold hover:text-blue-600 dark:hover:text-blue-300">Siguiente →</button>', l);
+      if (ok) {
+        if (!alreadyDone) {
+          state.completed.push(l.id);
+          saveState();
+          updateGamification();
+          renderSidebar();
+        }
+        scheduleAdvance(alreadyDone ? 1200 : 2200);
       }
-      scheduleAdvance(alreadyDone ? 1200 : 2200);
     } else {
       cancelAdvance();
       showFeedback(explainMistake(l, u, cols, verifyRes, verifyCols), 'error');
@@ -3493,16 +4167,16 @@ function translateSqlError(msg, l) {
 }
 function solutionButtons() {
   return `<div class="mt-3 flex flex-wrap gap-2">
-    <button onclick="showSolution()" class="px-3 py-2 rounded-lg bg-amber-500 text-slate-900 text-xs font-bold hover:brightness-95">👁️ Ver respuesta</button>
-    <button onclick="skipLesson()" class="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold">Ver respuesta y avanzar →</button>
-    <button onclick="getHint()" class="px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-bold">💡 Otra pista</button>
+    <button onclick="closeErrorOverlay();showSolution()" class="px-3 py-2 rounded-lg bg-amber-500 text-slate-900 text-xs font-bold hover:brightness-95">👁️ Ver respuesta</button>
+    <button onclick="closeErrorOverlay();skipLesson()" class="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold">Ver respuesta y avanzar →</button>
+    <button onclick="closeErrorOverlay();getHint()" class="px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-bold">💡 Otra pista</button>
   </div>`;
 }
 function explainMistake(l, u, cols, verifyRows, verifyCols, err) {
-  if (err) return `<strong>❌ ¿Por qué falló?</strong><br>${translateSqlError(err, l)}${solutionButtons()}`;
+  if (err) return translateSqlError(err, l) + solutionButtons();
 
   const exp = verifyRows.length ? { cols: verifyCols, rows: verifyRows } : expectedFromText(l.ex);
-  let why = '<strong>❌ Tu consulta es válida, pero el resultado no coincide. Te explico por qué:</strong><br>';
+  let why = '<strong>Tu consulta es válida, pero el resultado no coincide. Te explico por qué:</strong><br>';
 
   if (!u.length) {
     why += `Tu consulta devolvió <strong>0 filas</strong> y se esperaban ${exp.rows.length}. Revisa el <code>WHERE</code>: puede ser demasiado estricto o comparar texto con distinta capitalización.`;
@@ -3570,17 +4244,42 @@ function showEmpty(msg) {
   const e=document.getElementById('result-empty'); e.classList.remove('hidden'); e.textContent=msg;
 }
 function clearConsole() {
+  closeErrorOverlay();
   showEmpty('Ejecuta una consulta para ver los datos...');
   document.getElementById('feedback').classList.add('hidden');
   lastResult=null;
 }
+function showErrorOverlay(msg) {
+  const o = document.getElementById('error-overlay');
+  if (!o) return;
+  const body = document.getElementById('error-overlay-body');
+  if (body) body.innerHTML = msg;
+  o.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  const firstBtn = body && body.querySelector('button');
+  if (firstBtn) firstBtn.focus();
+}
+function closeErrorOverlay() {
+  const o = document.getElementById('error-overlay');
+  if (!o || o.classList.contains('hidden')) return;
+  o.classList.add('hidden');
+  const modal = document.getElementById('modal-root');
+  document.body.style.overflow = (modal && !modal.classList.contains('hidden')) ? 'hidden' : '';
+}
 function showFeedback(msg, type) {
   const f=document.getElementById('feedback');
-  f.className='mt-3 p-3 rounded-xl text-sm font-medium '+(
-    type==='success'?'bg-green-100 dark:bg-green-500/15 text-green-800 dark:text-green-300':
-    type==='error'?'bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300':
-                   'bg-blue-100 dark:bg-blue-500/15 text-blue-800 dark:text-blue-300');
-  f.innerHTML=msg;
+  const isError = type === 'error';
+  if (isError) showErrorOverlay(msg); else closeErrorOverlay();
+  f.className='mt-3 rounded-2xl text-sm font-medium '+(
+    type==='success'?'p-3 bg-green-100 dark:bg-green-500/15 text-green-800 dark:text-green-300 border border-green-300 dark:border-green-500/30':
+    isError?'p-4 md:p-6 max-h-[45vh] overflow-y-auto bg-red-100 dark:bg-red-500/20 text-red-900 dark:text-red-50 border-2 border-red-500 dark:border-red-400 shadow-xl shadow-red-500/20 text-base md:text-xl font-extrabold leading-8':
+            'p-3 bg-blue-100 dark:bg-blue-500/15 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-500/30');
+  f.innerHTML = isError
+    ? `<div class="mb-2 flex items-center gap-2 text-xl md:text-3xl font-black uppercase tracking-wide text-red-700 dark:text-red-100">
+         <span class="text-3xl leading-none">❌</span><span>Error · corrige esto</span>
+       </div>
+       <div class="text-base md:text-xl font-extrabold leading-8">${msg}</div>`
+    : msg;
 }
 function getHint() {
   const hs=LESSONS[currentIdx].hs;
@@ -3868,6 +4567,11 @@ function timeUp() {
 function renderResults() {
   clearInterval(tickTimer);
   const s=session;
+  const vr = validateSessionResult(s);
+  if (vr.length) {
+    showErrorOverlay('No se pudo validar el resultado: faltan campos de <strong>' + vr.join(', ') + '</strong>. Repite la sesión antes de recibir la felicitación.');
+    return;
+  }
   const total=s.questions.length*s.perQuestion;
   const score=s.answers.reduce((a,x)=>a+x.points,0);
   const passed=score>=s.pass;
@@ -3904,7 +4608,7 @@ function renderResults() {
       <div class="flex gap-2 justify-center flex-wrap">
         <button onclick="${s.type==='quiz'?"openQuiz('"+s.modId+"')":s.type==='interview'?'openInterview()':'openExam()'}" class="px-5 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 font-bold text-sm">🔁 Repetir</button>
         ${s.type==='quiz'?`<button onclick="closeSession();openStudy()" class="px-5 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 font-bold text-sm">📖 Modo estudio</button>`:''}
-        <button onclick="closeSession();openGoals()" class="px-5 py-2.5 rounded-xl bg-fuchsia-100 dark:bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300 font-bold text-sm">🎯 Mapa de metas</button>
+        <button onclick="closeSession();openGoals()" class="px-5 py-2.5 rounded-xl bg-fuchsia-100 dark:bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300 font-bold text-sm">🗺️ Aventura de castillos</button>
         ${passed&&s.type==='quiz'&&s.mi<MODULES.length-1?`<button onclick="closeSession();loadLesson(${firstLessonIndexOfModule(s.mi+1)})" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm">Siguiente meta →</button>`:''}
         ${passed&&s.type==='quiz'&&s.mi===MODULES.length-1?`<button onclick="closeSession();openExam()" class="px-5 py-2.5 rounded-xl bg-amber-500 text-slate-900 font-bold text-sm">🏆 Ir al examen final →</button>`:''}
         ${passed&&s.type==='exam'?`<button onclick="closeSession();openInterview()" class="px-5 py-2.5 rounded-xl bg-fuchsia-500 text-white font-bold text-sm">🎤 Ir a entrevista →</button>`:''}
@@ -3959,7 +4663,7 @@ function openCertificate() {
       <div class="mb-4 p-3 rounded-xl bg-slate-100 dark:bg-slate-800 print-hide">
         <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Nombre que aparecerá en el certificado</label>
         <input type="text" value="${name.replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" placeholder="Tu nombre completo"
-          oninput="state.certName=this.value;saveState();document.getElementById('cert-name-display').textContent=this.value.trim()||'Estudiante';"
+          oninput="state.certName=sanitizeName(this.value);saveState();document.getElementById('cert-name-display').textContent=state.certName||'Estudiante';"
           class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm outline-none focus:border-blue-500">
       </div>
 
@@ -4054,6 +4758,37 @@ function openMobileMenu(){
 function closeMobileMenu(){
   document.getElementById('mobile-overlay').classList.add('hidden');
   document.getElementById('mobile-drawer').style.transform='translateX(-100%)';
+}
+
+/* ---------------- Atajos de teclado para los botones ---------------- */
+function isOverlayOpen(id) {
+  const el = typeof document !== 'undefined' ? document.getElementById(id) : null;
+  return !!el && !!el.classList && typeof el.classList.contains === 'function' && !el.classList.contains('hidden');
+}
+function handleGlobalKeys(e) {
+  if (!e) return;
+  const key = (e.key === 'Escape' || e.keyCode === 27) ? 'Escape' : (e.key || '');
+  const target = e.target || {};
+  const tag = String(target.tagName || '').toLowerCase();
+  const typing = tag === 'input' || tag === 'textarea' || tag === 'select' || target.isContentEditable === true;
+
+  if (key === 'Escape') {
+    // Prioridad: error flotante → menú móvil → estudio → cualquier otro modal.
+    if (isOverlayOpen('error-overlay')) { closeErrorOverlay(); if (e.preventDefault) e.preventDefault(); return; }
+    if (isOverlayOpen('mobile-overlay')) { closeMobileMenu(); if (e.preventDefault) e.preventDefault(); return; }
+    if (isOverlayOpen('modal-root')) {
+      if (studyCtx.modId) closeStudy();
+      else if (!session) closeModal();
+      if (e.preventDefault) e.preventDefault();
+    }
+    return;
+  }
+
+  // Enter en la pausa de repaso equivale a pulsar "Ya revisé, sigamos estudiando".
+  if (key === 'Enter' && !typing && studyReview && isOverlayOpen('modal-root')) {
+    continueStudyReview();
+    if (e.preventDefault) e.preventDefault();
+  }
 }
 
 function toggleTheme() {
