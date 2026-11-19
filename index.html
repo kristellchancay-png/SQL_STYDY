@@ -99,7 +99,6 @@
         <h2 id="lesson-title" class="font-bold text-base md:text-xl truncate">Cargando...</h2>
       </div>
       <span id="validator-badge" title="Validadores de estado, estudio, práctica y felicitaciones" class="hidden lg:inline text-[10px] bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full font-bold">🛡️ Validadores activos</span>
-      <button onclick="openLicense()" title="Licencias, códigos de beneficio y precios" id="license-badge" class="text-[10px] px-2 py-1 rounded-full font-bold bg-amber-500/15 text-amber-400 hover:brightness-125">🔑 Licencia</button>
       <span id="stage-badge" class="hidden sm:inline text-xs bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full font-medium"></span>
       <button onclick="openGoals()" title="Mapa de metas: avance secuencial" class="p-2 rounded-lg bg-fuchsia-100 dark:bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300 hover:scale-105 transition"><span class="hidden sm:inline text-xs font-bold">🎯 Metas</span><span class="sm:hidden text-lg">🎯</span></button>
       <button onclick="openStudy()" title="Modo estudio: explicación personalizada del módulo" class="text-lg p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:scale-105 transition"><span>📖</span></button>
@@ -180,7 +179,6 @@
   </div>
 </div>
 
-<script id="license-config">window.SQL_LICENSE_CONFIG = {"enforce":true,"publicKeyJwk":{"key_ops":["verify"],"ext":true,"kty":"EC","x":"wTF7ap8BoJ4RwQS8D2HDiBJ8AwwlFYShvnVy-K3h21s","y":"3z4wY4kDoK1Bir3VTdUlQTJF5zaqqSvfUb1U5cXPVrM","crv":"P-256"},"price":{"amount":39,"currency":"USD","label":"Licencia Pro · 12 meses"},"bank":{"name":"","accountName":"","accountType":"","number":"","alias":"","note":"Transferencia bancaria"},"paymentLink":"","whatsapp":"","email":"","contactText":"Después de verificar tu pago, el administrador te enviará un código SQL1... que debes pegar en “Tengo licencia”.","freeModule":"Fundamentos","version":1,"issued":1795092824104};</script>
 <script>
 /* ============================================================================
    SQL MASTER PRO v2 — CAPA DE DATOS
@@ -3191,14 +3189,13 @@ function launchCelebration() {
 /* ---------------- Reglas de desbloqueo ---------------- */
 function moduleUnlocked(mi) {
   if (mi === 0) return true;
-  if (!licenseActive()) return false;
   return !!state.quizzes[MODULES[mi-1].id]?.passed;
 }
 function moduleComplete(mi) {
   return MODULES[mi].lessons.every(l => state.completed.includes(l.id));
 }
 function examUnlocked() {
-  return licenseActive() && MODULES.every(m => !!state.quizzes[m.id]?.passed);
+  return MODULES.every(m => !!state.quizzes[m.id]?.passed);
 }
 function nextLockedLesson() {
   for (let i=0;i<LESSONS.length;i++) if (!state.completed.includes(LESSONS[i].id)) return i;
@@ -3232,16 +3229,7 @@ window.addEventListener('DOMContentLoaded', () => {
 async function bootEngine() {
   const cfg = { locateFile:f => 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/' + f };
   SQL = await initSqlJs(cfg);
-  await initLicense();
-  let start = nextLockedLesson();
-  const startMi = MODULES.findIndex(m => m.id === LESSONS[start].moduleId);
-  if (!licenseActive() && startMi > 0) {
-    // Sin licencia: se queda en Fundamentos, que siempre es gratuito.
-    const m = MODULES[0];
-    const p = m.lessons.findIndex(l => !state.completed.includes(l.id));
-    start = firstLessonIndexOfModule(0) + (p >= 0 ? p : 0);
-  }
-  loadLesson(start);
+  loadLesson(nextLockedLesson());
   renderSidebar();
   updateGamification();
 }
@@ -3284,7 +3272,7 @@ function renderSidebar() {
           const active = gi===currentIdx;
           return `<button onclick="loadLesson(${gi})" class="w-full text-left px-2 py-1.5 rounded-lg text-[12.5px] transition flex items-start gap-2 ${active?'bg-blue-600 text-white shadow':done?'text-green-400 hover:bg-slate-800':'text-slate-300 hover:bg-slate-800'}">
             <span class="shrink-0 w-5 text-center">${done?'✅':(gi+1)+'.'}</span><span class="leading-tight">${l.t}</span></button>`;
-        }).join('') : `<div class="px-2 py-3 text-[11px] text-slate-600 italic">Bloqueado · ${m.lessons.length} estapas</div>${!licenseActive() && mi > 0 && !!state.quizzes[MODULES[mi-1].id]?.passed ? `<button onclick="openLicense('comprar')" class="w-full text-[10px] py-1.5 rounded-lg bg-amber-500/15 text-amber-400 font-bold">🔑 Licencia requerida</button>` : ''}`}
+        }).join('') : `<div class="px-2 py-3 text-[11px] text-slate-600 italic">Bloqueado · ${m.lessons.length} estapas</div>`}
       </div>
       ${unlocked ? `<button onclick="openQuiz('${m.id}')" ${!complete?'disabled opacity-40 cursor-not-allowed':''} class="mt-2 w-full text-[11px] py-2 rounded-lg border border-dashed ${q?.passed?'border-green-500 text-green-400':'border-blue-500/50 text-blue-400'} transition ${complete?'hover:bg-slate-800':''}">
         ${q?.passed ? '✅ Quiz aprobado ('+q.score+'/100) · Repetir' : complete ? '📝 Tomar quiz del módulo →' : '📝 Quiz (termina las estapas)'}
@@ -3326,12 +3314,6 @@ function goalActions(mi) {
   const guide = `<button onclick="openStudy('${m.id}')" class="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-bold hover:brightness-95">📖 Guía</button>`;
   if (st === 'locked') {
     const prev = MODULES[mi-1];
-    if (!licenseActive() && !!state.quizzes[prev.id]?.passed) {
-      return `<div class="px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 text-[11px] font-semibold space-y-2">
-        <div>🔑 Ya aprobaste Fundamentos. Necesitas licencia para abrir los 8 castillos restantes, el examen y el certificado.</div>
-        <div>${licenseCtaHtml()}</div>
-      </div>`;
-    }
     return `<div class="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800/60 text-slate-500 text-[11px] font-semibold">🔒 Supera el quiz de la meta ${mi} (${prev.title}) para abrir esta</div>`;
   }
   if (st === 'done') {
@@ -3348,11 +3330,7 @@ function goalActions(mi) {
   </div>`;
 }
 function goToGoal(mi) {
-  if (mi < 0 || mi >= MODULES.length) return;
-  if (!moduleUnlocked(mi)) {
-    if (mi > 0 && !licenseActive()) openLicense('comprar');
-    return;
-  }
+  if (mi < 0 || mi >= MODULES.length || !moduleUnlocked(mi)) return;
   const m = MODULES[mi];
   closeModal();
   if (moduleComplete(mi) && !state.quizzes[m.id]?.passed) { openQuiz(m.id); return; }
@@ -3365,10 +3343,7 @@ function startStageWithStudy(idx) {
   const l = LESSONS[idx];
   if (!l) return;
   const mi = MODULES.findIndex(m => m.id === l.moduleId);
-  if (mi < 0 || !moduleUnlocked(mi)) {
-    if (mi > 0 && !licenseActive()) openLicense('comprar');
-    return;
-  }
+  if (mi < 0 || !moduleUnlocked(mi)) return;
   if (state.completed.includes(l.id)) {
     closeModal();
     loadLesson(idx);
@@ -3475,12 +3450,7 @@ function openGoals() {
 /* ---------------- Estapas ---------------- */
 function loadLesson(idx) {
   const l = LESSONS[idx];
-  if (!l) return;
-  const targetMi = MODULES.findIndex(m=>m.id===l.moduleId);
-  if (!moduleUnlocked(targetMi)) {
-    if (targetMi > 0 && !licenseActive()) openLicense('comprar');
-    return;
-  }
+  if (!l || !moduleUnlocked(MODULES.findIndex(m=>m.id===l.moduleId))) return;
 
   // VALIDACIÓN DE ACCESO: sin estudio del módulo/tema no se carga la práctica.
   const gate = validateStudyGateForLesson(idx);
@@ -4460,22 +4430,14 @@ function startTest(kind, modId) {
 /* Envoltorios: siempre muestran el repaso antes de la prueba */
 function openQuiz(modId) {
   const mi = MODULES.findIndex(m => m.id === modId);
-  if (!moduleUnlocked(mi)) {
-    if (mi > 0 && !licenseActive()) openLicense('comprar');
-    return;
-  }
-  if (!moduleComplete(mi)) return;
+  if (!moduleUnlocked(mi) || !moduleComplete(mi)) return;
   openPreTest('quiz', modId);
 }
 function openExam() {
-  if (!examUnlocked()) {
-    if (!licenseActive()) openLicense('comprar');
-    return;
-  }
+  if (!examUnlocked()) return;
   openPreTest('exam');
 }
 function openInterview() {
-  if (!licenseActive()) { openLicense('comprar'); return; }
   if (!state.exam?.passed) return;
   openPreTest('interview');
 }
@@ -4617,16 +4579,6 @@ function renderResults() {
   const hints=s.answers.filter(a=>a.hint).length;
   const sec=Math.floor((Date.now()-s.started)/1000);
 
-  const upsell = (!licenseActive() && s.type==='quiz' && s.mi===0 && passed) ? `
-    <div class="mb-5 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 to-fuchsia-500/15 border border-amber-400/40 text-left">
-      <div class="text-sm font-black text-amber-600 dark:text-amber-300">🎉 ¡Fundamentos completado!</div>
-      <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-5">Esta primera meta es gratis. Para continuar con los 8 castillos restantes, el examen final y tu certificado necesitas una licencia. Si ya tienes código, actívalo en un segundo.</p>
-      <div class="mt-3 flex flex-wrap gap-2">
-        ${licenseCtaHtml()}
-        <button onclick="closeSession();openLicense('tengo')" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-[11px] font-bold">🔑 Ya tengo código</button>
-      </div>
-    </div>` : '';
-
   if (s.type==='quiz') {
     const prev=state.quizzes[s.modId];
     if (!prev || score>prev.score) state.quizzes[s.modId]={score,passed,date:Date.now()};
@@ -4652,7 +4604,6 @@ function renderResults() {
         <div class="text-4xl font-black text-blue-500">${score.toFixed(1)}<span class="text-lg text-slate-400">/${total}</span></div>
         <div class="text-[11px] text-slate-400 mt-1">Nota mínima: ${s.pass}</div>
       </div>
-      ${upsell}
       <div class="max-w-md mx-auto h-52 mb-5"><canvas id="diffChart"></canvas></div>
       <div class="flex gap-2 justify-center flex-wrap">
         <button onclick="${s.type==='quiz'?"openQuiz('"+s.modId+"')":s.type==='interview'?'openInterview()':'openExam()'}" class="px-5 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 font-bold text-sm">🔁 Repetir</button>
@@ -4684,7 +4635,6 @@ function renderResults() {
     setTimeout(()=>{
       if (session===s && !document.getElementById('modal-root').classList.contains('hidden')) {
         closeSession();
-        if (!licenseActive()) { openLicense('comprar'); return; }
         loadLesson(nextIdx);
         showFeedback('✅ Meta superada. <strong>Siguiente meta cargada automáticamente.</strong>', 'success');
       }
@@ -4694,7 +4644,6 @@ function renderResults() {
 
 /* ---------------- CERTIFICADO / PROGRESO ---------------- */
 function openCertificate() {
-  if (!licenseActive()) { openLicense('comprar'); return; }
   const quizzesPassed = Object.values(state.quizzes).filter(q=>q.passed).length;
   const xp = state.completed.length*100 + quizzesPassed*250 + (state.exam?.passed?1000:0) + (state.interview?.passed?500:0);
   const date = new Intl.DateTimeFormat('es-ES',{year:'numeric',month:'long',day:'numeric'}).format(new Date());
@@ -4868,296 +4817,6 @@ function resetProgress(){
   document.documentElement.classList.add('dark');
   saveState(); updateThemeIcon(); updateGamification();
   loadLesson(0);
-}
-
-</script>
-<script>
-/* ============================================================================
-   SQL STUDIO — MOTOR DE LICENCIAS (se verifica en el navegador, sin backend)
-   La clave pública viene de window.SQL_LICENSE_CONFIG. Los códigos se emiten
-   en portal-admin.html con la clave privada ECDSA P-256.
-   ============================================================================ */
-const LICENSE_STORE = 'sqlMasterLicense';
-const DEVICE_STORE  = 'sqlMasterDevice';
-const CONTACT_STORE = 'sqlMasterLicenseContact';
-const COUPON_STORE  = 'sqlMasterActiveCoupon';
-const LCFG = (window.SQL_LICENSE_CONFIG && window.SQL_LICENSE_CONFIG.publicKeyJwk)
-  ? window.SQL_LICENSE_CONFIG : null;
-const LIC_ENFORCE = !!(LCFG && LCFG.enforce);
-
-let licenseCache = { active:false, reason:'init', payload:null, coupon:null };
-let pubKeyPromise = null;
-let licenseUiTab = 'tengo';
-
-/* -------------------- utilidades base64url -------------------- */
-function licEnc(s){ return new TextEncoder().encode(String(s)); }
-function licB64u(bytes){ let s=''; for(const b of bytes) s+=String.fromCharCode(b); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
-function licUnb64u(s){ s=String(s).replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4)s+='='; const bin=atob(s), a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return a; }
-function licText(bytes){ return new TextDecoder().decode(bytes); }
-function licDevice(){
-  try{
-    let d=localStorage.getItem(DEVICE_STORE);
-    if(!d){ d=(crypto.randomUUID?crypto.randomUUID():('DEV-'+Date.now()+'-'+Math.random().toString(36).slice(2))); localStorage.setItem(DEVICE_STORE,d); }
-    return d;
-  }catch(e){ return 'DEV-LOCAL'; }
-}
-function licBadge(text,cls){
-  const el=document.getElementById('license-badge');
-  if(!el)return;
-  el.textContent=text;
-  el.className='text-[10px] px-2 py-1 rounded-full font-bold '+cls;
-}
-
-/* -------------------- verificación criptográfica -------------------- */
-function publicKey(){
-  if(pubKeyPromise) return pubKeyPromise;
-  pubKeyPromise = crypto.subtle.importKey('jwk',LCFG.publicKeyJwk,{name:'ECDSA',namedCurve:'P-256'},false,['verify'])
-    .catch(e=>{ pubKeyPromise=null; throw e; });
-  return pubKeyPromise;
-}
-
-async function verifySignedCode(code){
-  try{
-    if(!LCFG || !crypto.subtle) return {ok:false,reason:'Tu navegador no permite verificar licencias. Usa Chrome o Edge actualizado.'};
-    const parts=String(code||'').trim().split('.');
-    if(parts.length!==3 || parts[0]!=='SQL1') return {ok:false,reason:'El código no tiene el formato correcto. Debe empezar por SQL1.'};
-    const data=licUnb64u(parts[1]);
-    const sig=licUnb64u(parts[2]);
-    let payload;
-    try{ payload=JSON.parse(licText(data)); }catch(e){ return {ok:false,reason:'El código está dañado y no se puede leer.'}; }
-    if(!payload || payload.v!==1 || !payload.typ) return {ok:false,reason:'Código no reconocido.'};
-    const key=await publicKey();
-    const valid=await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},key,sig,data);
-    if(!valid) return {ok:false,reason:'Firma no válida. Este código no fue emitido por el administrador.'};
-    if(!payload.exp || Date.now()>payload.exp) return {ok:false,reason:'Este código ya venció. Pide una renovación.'};
-    return {ok:true,payload};
-  }catch(e){ return {ok:false,reason:'No se pudo verificar: '+(e.message||e)}; }
-}
-
-/* -------------------- estado de licencia -------------------- */
-function licenseActive(){ return licenseCache.active; }
-function licenseReason(){ return licenseCache.reason; }
-function licensePlan(){ return licenseCache.payload?.pln || 'Pro'; }
-function licenseExpiry(){ return licenseCache.payload?.exp || 0; }
-
-async function initLicense(){
-  if(!LIC_ENFORCE){
-    licenseCache={active:true,reason:'open',payload:{pln:'Modo abierto'},coupon:null};
-    licBadge('🎁 Modo abierto','bg-emerald-500/15 text-emerald-400');
-    return;
-  }
-  try{
-    const raw=localStorage.getItem(LICENSE_STORE);
-    if(!raw){
-      licenseCache={active:false,reason:'no-license',payload:null,coupon:null};
-      licBadge('🔑 Sin licencia','bg-amber-500/15 text-amber-400');
-      return;
-    }
-    const act=JSON.parse(raw);
-    if(act.source==='cupon'){
-      const r=await verifySignedCode(act.code);
-      if(!r.ok || r.payload.typ!=='CUP' || r.payload.ben?.k!=='free_days'){
-        localStorage.removeItem(LICENSE_STORE);
-        licenseCache={active:false,reason:'cupon-invalido',payload:null,coupon:null};
-        licBadge('🔑 Sin licencia','bg-amber-500/15 text-amber-400');
-        return;
-      }
-      licenseCache={active:true,reason:'cupon',payload:act.payload,coupon:r.payload};
-      licBadge('🎟️ '+(r.payload.lab||'Beneficio'),'bg-fuchsia-500/15 text-fuchsia-300');
-      return;
-    }
-    const r=await verifySignedCode(act.code||'');
-    if(!r.ok || r.payload.typ!=='LIC'){
-      localStorage.removeItem(LICENSE_STORE);
-      licenseCache={active:false,reason:r.reason||'licencia-invalida',payload:null,coupon:null};
-      licBadge('🔑 Sin licencia','bg-amber-500/15 text-amber-400');
-      return;
-    }
-    licenseCache={active:true,reason:'licencia',payload:r.payload,coupon:null};
-    licBadge('🔑 '+(r.payload.pln||'Pro'),'bg-emerald-500/15 text-emerald-400');
-  }catch(e){
-    licenseCache={active:false,reason:'error',payload:null,coupon:null};
-    licBadge('⚠️ Licencia','bg-red-500/15 text-red-400');
-  }
-}
-
-/* -------------------- activación -------------------- */
-function licMsg(html,color='text-amber-400'){
-  const el=document.getElementById('licMsg');
-  if(el){ el.innerHTML=html; el.className='mt-3 text-[11px] leading-5 '+color; }
-}
-
-async function activarCodigo(){
-  const code=(document.getElementById('licCode')?.value||'').trim();
-  if(!code) return licMsg('Pega aquí tu código de licencia.','text-amber-400');
-  licMsg('⏳ Verificando firma…','text-blue-400');
-  const r=await verifySignedCode(code);
-  if(!r.ok) return licMsg('❌ '+r.reason,'text-red-400');
-  if(r.payload.typ!=='LIC') return licMsg('❌ Ese código es de beneficio, no de licencia. Usa la pestaña de códigos de beneficio.','text-red-400');
-  const act={code,payload:r.payload,source:'lic',activatedAt:Date.now(),deviceId:licDevice()};
-  localStorage.setItem(LICENSE_STORE,JSON.stringify(act));
-  await initLicense();
-  licMsg('✅ Licencia activada para <strong>'+esc(r.payload.nam||'alumno')+'</strong>. Ya puedes continuar.','text-emerald-400');
-  renderSidebar(); updateGamification();
-  confetti({particleCount:90,spread:70,origin:{y:.6}});
-}
-
-async function activarCupon(){
-  const code=(document.getElementById('cupCode')?.value||'').trim();
-  if(!code) return licMsg('Pega aquí tu código de beneficio.','text-amber-400');
-  licMsg('⏳ Verificando beneficio…','text-blue-400');
-  const r=await verifySignedCode(code);
-  if(!r.ok) return licMsg('❌ '+r.reason,'text-red-400');
-  if(r.payload.typ!=='CUP') return licMsg('❌ Ese código es una licencia. Usa la pestaña “Tengo licencia”.','text-red-400');
-  const kind=r.payload.ben?.k;
-  if(kind==='discount'){
-    localStorage.setItem(COUPON_STORE,JSON.stringify({code,payload:r.payload}));
-    licMsg('✅ Cupón aplicado: <strong>'+esc(r.payload.lab||'beneficio')+'</strong> · '+r.payload.ben.v+'% de descuento. El precio ya está actualizado en la pestaña de compra.','text-emerald-400');
-    licenseUiTab='comprar'; setTimeout(()=>openLicense('comprar'),900);
-    return;
-  }
-  if(kind==='free_days'){
-    const days=Number(r.payload.ben.v)||0;
-    const payload={v:1,typ:'LIC',sub:'CUP-'+(r.payload.sub||''),nam:r.payload.lab||'Beneficio',pln:'Beneficio',iat:Date.now(),exp:Date.now()+days*86400000,dev:1,non:'CUPON'};
-    const act={code,payload,source:'cupon',activatedAt:Date.now(),deviceId:licDevice()};
-    localStorage.setItem(LICENSE_STORE,JSON.stringify(act));
-    await initLicense();
-    licMsg('✅ Beneficio activado por <strong>'+days+' días</strong>.','text-emerald-400');
-    renderSidebar(); updateGamification();
-    confetti({particleCount:90,spread:70,origin:{y:.6}});
-    return;
-  }
-  licMsg('❌ El beneficio de ese código no es reconocido.','text-red-400');
-}
-
-function activeDiscount(){
-  try{
-    const raw=localStorage.getItem(COUPON_STORE);
-    if(!raw)return 0;
-    const c=JSON.parse(raw);
-    if(c.payload?.ben?.k==='discount' && Date.now()<c.payload.exp) return Number(c.payload.ben.v)||0;
-  }catch(e){}
-  return 0;
-}
-function priceForStudent(){
-  const base=Number(LCFG?.price?.amount||0);
-  const d=activeDiscount();
-  return Math.max(0,Math.round((base*(100-d)/100)*100)/100);
-}
-
-function generarSolicitud(){
-  const nam=(document.getElementById('payName')?.value||'').trim();
-  const ema=(document.getElementById('payEmail')?.value||'').trim();
-  const phone=(document.getElementById('payPhone')?.value||'').trim();
-  if(!nam) return licMsg('Escribe tu nombre para generar la solicitud.','text-amber-400');
-  const contact={nam,ema,phone};
-  localStorage.setItem(CONTACT_STORE,JSON.stringify(contact));
-  const obj={v:1,nam,ema,phone,pln:LCFG?.price?.label||'Licencia Pro',amt:priceForStudent(),cur:LCFG?.price?.currency||'USD',dev:licDevice(),ts:Date.now()};
-  const code='PAY1.'+licB64u(licEnc(JSON.stringify(obj)));
-  const ta=document.getElementById('payRequest');
-  if(ta){ ta.value=code; ta.classList.remove('hidden'); }
-  const btn=document.getElementById('copyPayBtn');
-  if(btn)btn.classList.remove('hidden');
-  licMsg('✅ Solicitud generada. Cópiala y envíala por WhatsApp o correo. El administrador te devolverá tu código de licencia.','text-emerald-400');
-}
-async function copiarSolicitud(){
-  const ta=document.getElementById('payRequest');
-  if(!ta||!ta.value)return;
-  try{ await navigator.clipboard.writeText(ta.value); licMsg('📋 Solicitud copiada. Pégala en el WhatsApp del administrador.','text-emerald-400'); }
-  catch(e){ ta.select(); document.execCommand('copy'); }
-}
-function whatsappLink(){
-  const c=JSON.parse(localStorage.getItem(CONTACT_STORE)||'{}');
-  const txt='Hola, quiero activar mi licencia de SQL Studio. Mi solicitud es: '+(document.getElementById('payRequest')?.value||'');
-  const wa=(LCFG?.whatsapp||'').replace(/\D/g,'');
-  return wa?'https://wa.me/'+wa+'?text='+encodeURIComponent(txt):'#';
-}
-function licCurrency(){ return LCFG?.price?.currency||'USD'; }
-
-/* -------------------- interfaz -------------------- */
-function openLicense(tab='tengo'){
-  licenseUiTab=tab||'tengo';
-  if(!LIC_ENFORCE){
-    openModal(`<div class="p-6 text-center">
-      <button onclick="closeModal()" class="float-right text-slate-400 hover:text-red-400 text-xl">✕</button>
-      <div class="text-5xl mb-3">🎁</div>
-      <h3 class="text-xl font-bold text-slate-800 dark:text-white">Modo abierto</h3>
-      <p class="text-xs text-slate-500 mt-3">El administrador aún no ha publicado la configuración de licencias. Mientras tanto, todo el curso está disponible sin restricciones.</p>
-    </div>`);
-    return;
-  }
-  const active=licenseActive();
-  const tabs=`<div class="flex gap-2 mb-5 flex-wrap">
-    ${[['tengo','🔑 Tengo licencia'],['cupon','🎟️ Código de beneficio'],['comprar','💳 Obtener licencia']]
-      .map(([k,n])=>`<button onclick="openLicense('${k}')" class="px-3 py-2 rounded-lg text-[11px] font-bold ${k===licenseUiTab?'bg-blue-600 text-white':'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">${n}</button>`).join('')}
-  </div>`;
-  let body='';
-  if(licenseUiTab==='tengo'){
-    body=`<div class="space-y-3">
-      <p class="text-xs text-slate-500 leading-6">Pega el código que te envió el administrador. Se verifica criptográficamente en tu dispositivo: nadie puede inventar uno válido.</p>
-      <textarea id="licCode" class="w-full h-24 p-3 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-[11px] font-mono outline-none" placeholder="SQL1.eyJ2IjoxLCJ0eXAiOiJMSUMi..."></textarea>
-      <button onclick="activarCodigo()" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs">✅ Activar licencia</button>
-      ${active?`<div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-500">✓ Licencia activa: <strong>${esc(licensePlan())}</strong> · vence el ${new Date(licenseExpiry()).toLocaleDateString('es-ES')}</div>`:''}
-      <div id="licMsg"></div>
-    </div>`;
-  }else if(licenseUiTab==='cupon'){
-    body=`<div class="space-y-3">
-      <p class="text-xs text-slate-500 leading-6">Los códigos de beneficio pueden dar descuento o días gratis. También van firmados por el administrador.</p>
-      <input id="cupCode" class="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-[11px] font-mono outline-none" placeholder="SQL1.eyJ2IjoxLCJ0eXAiOiJDVVAi...">
-      <button onclick="activarCupon()" class="px-5 py-2.5 rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold text-xs">🎟️ Aplicar beneficio</button>
-      ${activeDiscount()?`<div class="p-3 rounded-xl bg-fuchsia-500/10 border border-fuchsia-500/30 text-[11px] text-fuchsia-500">✓ Descuento activo: ${activeDiscount()}%</div>`:''}
-      <div id="licMsg"></div>
-    </div>`;
-  }else{
-    const price=priceForStudent();
-    const d=activeDiscount();
-    const bank=LCFG?.bank||{};
-    const bankHtml=(bank.number||bank.alias)?`<div class="p-4 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-[11px] space-y-1">
-      <div class="font-bold text-slate-700 dark:text-slate-200 mb-2">🏦 Transferencia bancaria</div>
-      ${bank.name?`<div><span class="text-slate-500">Banco:</span> ${esc(bank.name)}</div>`:''}
-      ${bank.accountName?`<div><span class="text-slate-500">Titular:</span> ${esc(bank.accountName)}</div>`:''}
-      ${bank.accountType?`<div><span class="text-slate-500">Cuenta:</span> ${esc(bank.accountType)}</div>`:''}
-      ${bank.number?`<div><span class="text-slate-500">Número:</span> <b class="text-blue-500">${esc(bank.number)}</b></div>`:''}
-      ${bank.alias?`<div><span class="text-slate-500">Alias / CCI:</span> <b class="text-blue-500">${esc(bank.alias)}</b></div>`:''}
-      ${bank.note?`<div class="text-slate-500 pt-1">${esc(bank.note)}</div>`:''}
-    </div>`:'';
-    const payLink=LCFG?.paymentLink||'';
-    body=`<div class="space-y-4">
-      <div class="p-5 rounded-2xl bg-gradient-to-r from-blue-600 to-fuchsia-600 text-white">
-        <div class="text-[10px] uppercase tracking-widest opacity-80">${esc(LCFG?.price?.label||'Licencia')}</div>
-        <div class="text-3xl font-black mt-1">${price} <span class="text-lg opacity-80">${esc(licCurrency())}</span></div>
-        ${d?`<div class="text-[11px] mt-1 line-through opacity-70">${LCFG?.price?.amount} ${esc(licCurrency())}</div><div class="text-[11px] text-emerald-200 font-bold">Cupón aplicado: -${d}%</div>`:''}
-        <div class="text-[10px] opacity-80 mt-2">Fundamentos gratis · 8 castillos + examen + certificado</div>
-      </div>
-      ${payLink?`<a href="${esc(payLink)}" target="_blank" rel="noopener" class="block w-full text-center px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">⚡ Pagar ahora con enlace seguro</a>`:''}
-      ${bankHtml}
-      <div class="grid md:grid-cols-3 gap-3">
-        <div><label class="block text-[10px] text-slate-500 font-bold uppercase mb-1">Tu nombre</label><input id="payName" class="w-full p-2.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs" value="${esc(JSON.parse(localStorage.getItem(CONTACT_STORE)||'{}').nam||'')}"></div>
-        <div><label class="block text-[10px] text-slate-500 font-bold uppercase mb-1">Correo</label><input id="payEmail" class="w-full p-2.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs" value="${esc(JSON.parse(localStorage.getItem(CONTACT_STORE)||'{}').ema||'')}"></div>
-        <div><label class="block text-[10px] text-slate-500 font-bold uppercase mb-1">WhatsApp</label><input id="payPhone" class="w-full p-2.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs" value="${esc(JSON.parse(localStorage.getItem(CONTACT_STORE)||'{}').phone||'')}"></div>
-      </div>
-      <button onclick="generarSolicitud()" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs">📨 Ya pagué · generar solicitud</button>
-      <textarea id="payRequest" class="hidden w-full h-20 p-3 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-[10px] font-mono"></textarea>
-      <div class="flex gap-2 flex-wrap">
-        <button id="copyPayBtn" onclick="copiarSolicitud()" class="hidden px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-xs font-bold">📋 Copiar solicitud</button>
-        <a id="waPayBtn" href="${whatsappLink()}" target="_blank" rel="noopener" class="px-4 py-2 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-bold">💬 Enviar por WhatsApp</a>
-      </div>
-      <p class="text-[10px] text-slate-500 leading-5">${esc(LCFG?.contactText||'Después de verificar tu pago, el administrador te enviará un código SQL1... que debes pegar en “Tengo licencia”.')}</p>
-      <div id="licMsg"></div>
-    </div>`;
-  }
-  openModal(`<div class="p-5 md:p-7">
-    <div class="flex items-start justify-between gap-3 mb-4">
-      <div><h3 class="text-lg md:text-xl font-black text-slate-800 dark:text-white">🔑 Acceso y licencias</h3>
-      <p class="text-[11px] text-slate-500 mt-1">${active?'Licencia activa':'Fundamentos gratis · licencia para continuar'}</p></div>
-      <button onclick="closeModal()" class="text-2xl text-slate-400 hover:text-red-400 leading-none">✕</button>
-    </div>
-    ${tabs}${body}
-  </div>`, true);
-}
-
-function licenseCtaHtml(){
-  return `<button onclick="openLicense('comprar')" class="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 text-[11px] font-bold">🔑 Ver licencias / precios</button>`;
 }
 
 </script>
