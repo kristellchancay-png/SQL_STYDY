@@ -17,6 +17,9 @@ https://kristellchancay-png.github.io/SQL_STYDY/
 - Progreso guardado en `localStorage` (`sqlMasterV2`).
 - Certificado descargable en PDF.
 - Diseño responsive, modo oscuro y accesibilidad por teclado.
+- **Control de acceso por licencia** sin backend: la **meta 1 (Fundamentos) es gratis** y los 8 castillos restantes, el examen y el certificado requieren licencia.
+- Códigos firmados con **ECDSA P-256** (no se pueden falsificar editando el navegador), cupones de descuento/días gratis y solicitudes de pago `PAY1`.
+- **🎁 Modo abierto**: si el administrador aún no publica la configuración de licencias, el curso completo queda disponible para no bloquear el estudio.
 
 ## 🚀 Cómo abrirlo
 
@@ -28,6 +31,19 @@ https://kristellchancay-png.github.io/SQL_STYDY/
 El sitio se sirve desde GitHub Pages usando la rama `main`, carpeta raíz (`/`).
 `index.html` es un build autocontenido: no necesita servidor ni archivos adicionales.
 
+## 🔐 Licencias y cobros
+
+El Dueño del curso gestiona todo desde `portal-admin.html`, que se guarda **solo en su PC** (contiene la clave privada y **no debe subirse a GitHub**). Desde ese portal se pueden:
+
+- Crear usuarios y generar sus códigos `SQL1...` firmados, con plan, duración y dispositivos.
+- Renovar, revocar (eliminando al usuario) y llevar un registro de licencias emitidas.
+- Generar códigos de beneficio: descuento porcentual o días gratis.
+- Configurar precio, moneda, datos de transferencia bancaria y/o un enlace de pago (Mercado Pago, Stripe, PayPal).
+- Importar solicitudes `PAY1` que generan los alumnos sin código, verificar el pago en el banco y aprobarlo manualmente; el portal crea al usuario y firma su licencia.
+- Descargar la configuración pública y volver a inyectarla en `index.html` cuando cambien claves, precios o datos de contacto.
+
+La verificación ocurre en el navegador del alumno: la app solo conoce la clave pública. Ningún dato bancario del alumno se envía a la app ni se guarda en el sitio.
+
 ## ✅ Estado
 
-Build validado: 9 metas, 108 estapas, 60 ejemplos reales, 165 comprobaciones de contenido y validadores activos en tiempo de ejecución.
+Build validado: 9 metas, 108 estapas, 60 ejemplos reales, 165 comprobaciones de contenido, 10 validadores automáticos, flujo administrativo de extremo a extremo y validadores activos en tiempo de ejecución.
