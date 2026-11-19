@@ -44,14 +44,6 @@ El Dueño del curso gestiona todo desde `portal-admin.html`, que se guarda **sol
 
 La verificación ocurre en el navegador del alumno: la app solo conoce la clave pública. Ningún dato bancario del alumno se envía a la app ni se guarda en el sitio.
 
-## 🔐 Portal privado (solo administrador)
-
-El administrador puede abrir el portal desde cualquier dispositivo en:
-
-https://kristellchancay-png.github.io/SQL_STYDY/admin.html
-
-Solicita un token de GitHub con acceso al repositorio privado `SQL_STYDY_ADMIN`, donde se guarda el registro de cada usuario con su licencia, cupones y cobros. El sitio público de estudiantes sigue siendo accesible sin token; el portal y las claves privadas nunca se publican en GitHub Pages.
-
 ## ✅ Estado
 
 Build validado: 9 metas, 108 estapas, 60 ejemplos reales, 165 comprobaciones de contenido, 10 validadores automáticos, flujo administrativo de extremo a extremo y validadores activos en tiempo de ejecución.
